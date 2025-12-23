@@ -7,7 +7,7 @@
 
     <style>
         :root {
-            --primary-color: #bb0d0d; /* สีธีมหลัก */
+            --primary-color: #bb0d0d;
             --bg-color: #f4f4f9;
             --chat-bg: #ffffff;
             --user-msg-bg: #0056b3;
@@ -81,6 +81,7 @@
         .chat-area {
             flex: 1;
             padding: 20px;
+            padding-bottom: 10px; /* ลด padding ล่างเพราะมีเมนูลอย */
             overflow-y: auto;
             background: #fff;
             scroll-behavior: smooth;
@@ -142,29 +143,36 @@
             border-top-right-radius: 4px;
         }
 
-        /* --- Quick Menu Style --- */
-        .quick-menu {
-            margin-top: 15px;
+        /* --- (UPDATED) Quick Menu Bar Style --- */
+        /* ย้ายมาอยู่ด้านล่างแทน */
+        .quick-menu-bar {
             display: flex;
-            flex-direction: column;
             gap: 8px;
+            overflow-x: auto; /* เลื่อนแนวนอนได้ถ้าปุ่มเยอะ */
+            padding-bottom: 10px;
+            white-space: nowrap;
+            /* ซ่อน Scrollbar ให้สวยงาม */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE 10+ */
+        }
+        .quick-menu-bar::-webkit-scrollbar { 
+            display: none; /* Chrome/Safari */
         }
         
         .quick-btn {
             background-color: white;
             border: 1px solid var(--primary-color);
             color: var(--primary-color);
-            padding: 8px 15px;
+            padding: 6px 14px;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 500;
             transition: all 0.2s ease;
-            text-align: center;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
+            gap: 6px;
+            flex-shrink: 0; /* ไม่ให้ปุ่มหด */
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
@@ -172,11 +180,10 @@
             background-color: var(--primary-color);
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(187, 13, 13, 0.2);
         }
 
         .quick-btn i {
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
         /* --- CSS ปุ่มฟังเสียง --- */
@@ -194,7 +201,6 @@
             gap: 5px;
             transition: 0.2s;
         }
-
         .tts-btn:hover {
             background: #ddd;
             color: #333;
@@ -202,9 +208,11 @@
 
         /* --- INPUT AREA --- */
         .chat-input-area {
-            padding: 15px;
+            padding: 10px 15px 15px 15px;
             background: white;
             border-top: 1px solid #eee;
+            display: flex;
+            flex-direction: column; /* จัดเรียงแนวตั้ง เพื่อเอาเมนูไว้บนกล่องพิมพ์ */
         }
 
         .chat-input-wrapper {
@@ -244,19 +252,12 @@
             margin-bottom: 2px;
         }
 
-        #sendBtn:hover {
-            opacity: 0.9;
-            transform: scale(1.05);
-        }
-
         .disclaimer {
             font-size: 0.75rem;
             color: #888;
             text-align: center;
             margin-top: 8px;
         }
-
-        button i { font-size: 18px; }
     </style>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -284,27 +285,26 @@
                     <p>สวัสดีครับ! ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ</p>
                     <p>เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ 👇</p>
                     
-                    <div class="quick-menu">
-                        <button class="quick-btn" onclick="sendQuickMessage('เวลาทำการ')">
-                            <i class="far fa-clock"></i> เวลาทำการ
-                        </button>
-                        <button class="quick-btn" onclick="sendQuickMessage('ช่องทางติดต่อ')">
-                            <i class="fas fa-phone-alt"></i> ช่องทางติดต่อ
-                        </button>
-                        <button class="quick-btn" onclick="sendQuickMessage('บริการหลัก')">
-                            <i class="fas fa-book-open"></i> บริการหลัก
-                        </button>
-                    </div>
-
                     <button class="tts-btn" onclick="playFinalVoice('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ')">
                         <i class="fas fa-volume-up"></i> ฟังเสียง
                     </button>
-
                 </div>
             </div>
         </div>
 
         <div class="chat-input-area">
+            
+            <div class="quick-menu-bar">
+                <button class="quick-btn" onclick="sendQuickMessage('เวลาทำการ')">
+                    <i class="far fa-clock"></i> เวลาทำการ
+                </button>
+                <button class="quick-btn" onclick="sendQuickMessage('ช่องทางติดต่อ')">
+                    <i class="fas fa-phone-alt"></i> ติดต่อ
+                </button>
+                <button class="quick-btn" onclick="sendQuickMessage('บริการหลัก')">
+                    <i class="fas fa-book-open"></i> บริการ
+                </button>
+                </div>
             <div class="chat-input-wrapper">
                 <textarea id="userInput" placeholder="พิมพ์ข้อความ..." rows="1"></textarea>
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
@@ -315,16 +315,15 @@
 
 <script>
 let appendMessage, getBotResponse, playFinalVoice;
-let currentAudio = null; // ตัวแปรเก็บเสียงที่กำลังเล่น
+let currentAudio = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // --- ระบบเสียงแบบใหม่ (Robust System for Mobile) ---
+    // --- ระบบเสียง (เหมือนเดิม) ---
     playFinalVoice = function(text) {
-        // 1. หยุดเสียงเก่าก่อน (ถ้ามี)
         if (currentAudio) {
             currentAudio.pause();
             currentAudio = null;
@@ -333,20 +332,16 @@ document.addEventListener('DOMContentLoaded', () => {
             window.speechSynthesis.cancel();
         }
 
-        // 2. เตรียมข้อความ
         let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
         if(!cleanText) return;
 
-        // 3. เริ่มกระบวนการเล่นเสียง (พยายามใช้ Google ก่อน)
         playGoogleQueue(cleanText);
     }
 
-    // ฟังก์ชันเล่นเสียง Google แบบหั่นท่อน (แก้ปัญหาเสียงดับบนมือถือ)
     function playGoogleQueue(text) {
-        const MAX_LEN = 100; // ตัดคำสั้นๆ เพื่อให้ Google ยอมปล่อยเสียง
+        const MAX_LEN = 100; 
         let sentences = [];
         
-        // หั่นข้อความ
         while (text.length > 0) {
             let chunk = text.substring(0, MAX_LEN);
             let lastSpace = chunk.lastIndexOf(' ');
@@ -358,60 +353,45 @@ document.addEventListener('DOMContentLoaded', () => {
         let index = 0;
         
         function playNextChunk() {
-            if (index >= sentences.length) return; // จบแล้ว
+            if (index >= sentences.length) return; 
 
             let chunk = sentences[index];
-            // URL สำหรับขอไฟล์เสียง
             let url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=th&client=tw-ob`;
             
             let audio = new Audio(url);
-            currentAudio = audio; // เก็บลงตัวแปร Global
+            currentAudio = audio; 
 
-            // เมื่อเล่นจบท่อนนี้ ให้เล่นท่อนต่อไป
             audio.onended = function() {
                 index++;
                 playNextChunk();
             };
 
-            // *** สำคัญ: ถ้า Google Error (เช่นในมือถือบางรุ่น) ให้ใช้เสียงเครื่องแทนทันที ***
             audio.onerror = function() {
                 console.log("Google Voice Failed, switching to Native.");
-                // ส่งข้อความที่เหลือทั้งหมดไปอ่านแบบ Native (ในมือถือเสียง Native ชัดอยู่แล้ว)
                 playNativeFallback(sentences.slice(index).join(" ")); 
             };
 
-            // สั่งเล่น
             let playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.log("Auto-play blocked or Network error:", error);
-                    // ถ้าโดนบล็อก หรือเน็ตช้า ให้ใช้เสียงเครื่องแทนทันที
                     playNativeFallback(sentences.slice(index).join(" "));
                 });
             }
         }
-
-        playNextChunk(); // เริ่มเล่นท่อนแรก
+        playNextChunk();
     }
 
-    // ฟังก์ชันสำรอง ใช้เสียงในเครื่อง (ชัดบนมือถือ Android/iOS)
     function playNativeFallback(text) {
         if (!('speechSynthesis' in window)) return;
-        
         window.speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'th-TH'; 
         utterance.rate = 1.0;
-
-        // พยายามหาเสียงไทยในเครื่อง
         let voices = window.speechSynthesis.getVoices();
         let thaiVoice = voices.find(v => v.lang.includes('th'));
         if (thaiVoice) utterance.voice = thaiVoice;
-
         window.speechSynthesis.speak(utterance);
     }
-    // ----------------------------------------
 
     appendMessage = function(sender, text) {
         const messageGroup = document.createElement('div');
@@ -440,18 +420,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const ttsButton = document.createElement('button');
             ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
-            
             ttsButton.onclick = function() {
                 playFinalVoice(text);
             };
-
             messageDiv.appendChild(ttsButton);
         }
 
         messageGroup.appendChild(avatarDiv);
         messageGroup.appendChild(messageDiv);
         chatArea.appendChild(messageGroup);
-
         chatArea.scrollTop = chatArea.scrollHeight;
     }
 
@@ -478,9 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.processUserMessage = function(text) {
         if (!text) return;
-
         appendMessage("user", text);
-        
         setTimeout(() => {
             appendMessage("bot", getBotResponse(text));
         }, 500);
@@ -489,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
-        
         userInput.value = "";
         adjustTextareaHeight();
         processUserMessage(text);
