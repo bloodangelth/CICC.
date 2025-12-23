@@ -120,14 +120,14 @@
         }
 
         .message {
-            max-width: 80%; /* เพิ่มความกว้างเพื่อให้ปุ่มไม่เบียดกัน */
+            max-width: 80%;
             padding: 12px 16px;
             border-radius: 18px;
             font-size: 1rem;
             line-height: 1.5;
             word-wrap: break-word;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            position: relative; /* เพิ่มเพื่อให้จัดตำแหน่งปุ่มเสียงได้ */
+            position: relative;
         }
 
         .bot-message {
@@ -146,7 +146,7 @@
         .quick-menu {
             margin-top: 15px;
             display: flex;
-            flex-direction: column; /* เรียงแนวตั้ง หรือใช้ flex-wrap: wrap ถ้าอยากเรียงแนวนอน */
+            flex-direction: column;
             gap: 8px;
         }
         
@@ -179,7 +179,7 @@
             font-size: 1.1rem;
         }
 
-        /* --- (NEW) CSS สำหรับปุ่มฟังเสียง --- */
+        /* --- CSS ปุ่มฟังเสียง --- */
         .tts-btn {
             background: transparent;
             border: 1px solid #ccc;
@@ -199,7 +199,6 @@
             background: #ddd;
             color: #333;
         }
-        /* ---------------------------------- */
 
         /* --- INPUT AREA --- */
         .chat-input-area {
@@ -297,7 +296,7 @@
                         </button>
                     </div>
 
-                    <button class="tts-btn" onclick="playOnlineVoice('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ')">
+                    <button class="tts-btn" onclick="playSmartVoice('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ')">
                         <i class="fas fa-volume-up"></i> ฟังเสียง
                     </button>
 
@@ -315,31 +314,74 @@
     </div>
 
 <script>
-// ประกาศตัวแปร Global เพื่อให้เรียกใช้ได้ทั่วถึง
-let appendMessage, getBotResponse, playOnlineVoice;
+// ประกาศตัวแปร Global
+let appendMessage, getBotResponse, playSmartVoice;
 
 document.addEventListener('DOMContentLoaded', () => {
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // --- (NEW) ฟังก์ชันเล่นเสียงออนไลน์ (ไม่ต้องง้อ Windows) ---
-    playOnlineVoice = function(text) {
-        // 1. ลบ HTML tags และตัวอักษรพิเศษออก เพื่อให้ได้ข้อความล้วน
-        let cleanText = text.replace(/<[^>]*>/g, ' '); 
-        cleanText = cleanText.replace(/&nbsp;/g, ' ');
-        cleanText = cleanText.trim();
-
+    // --- (NEW) ระบบเสียงอัจฉริยะ (Hybrid) ---
+    playSmartVoice = function(text) {
+        // ล้างข้อความให้สะอาด
+        let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
         if(!cleanText) return;
 
-        // 2. ใช้ Google Translate TTS API (Client Side Hack)
-        // client=tw-ob เป็นพารามิเตอร์สำคัญที่ทำให้เรียกผ่านเว็บได้ฟรี
-        const encodedText = encodeURIComponent(cleanText);
-        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=th&client=tw-ob`;
+        // ตรวจสอบว่าเป็นมือถือหรือไม่
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // 3. สร้าง Audio Object และเล่นเสียง
-        const audio = new Audio(audioUrl);
-        audio.play().catch(e => console.error("Error playing audio:", e));
+        if (isMobile) {
+            // [กรณีมือถือ] ใช้ระบบ Native เพราะมีเสียงไทยคุณภาพดี (Siri/Google) อยู่แล้ว และเสถียรกว่า
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'th-TH'; // บังคับภาษาไทย
+                utterance.rate = 1.0; 
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("อุปกรณ์นี้ไม่รองรับเสียง");
+            }
+        } else {
+            // [กรณี PC/Windows] ใช้ Google Online เพราะ Windows มักไม่มีเสียงไทย
+            playGoogleVoicePC(cleanText);
+        }
+    }
+
+    // ฟังก์ชันย่อยสำหรับ PC: เล่นเสียง Google แบบตัดคำ (แก้ปัญหาข้อความยาวแล้วเสียงดับ)
+    function playGoogleVoicePC(text) {
+        const MAX_LEN = 100; // Google API รับได้ประมาณ 100 ตัวอักษรต่อครั้ง
+        const chunks = [];
+        
+        // แบ่งข้อความเป็นท่อนๆ
+        while (text.length > 0) {
+            let chunk = text.substring(0, MAX_LEN);
+            let lastSpace = chunk.lastIndexOf(' ');
+            if (lastSpace > 0 && text.length > MAX_LEN) {
+                 chunk = chunk.substring(0, lastSpace);
+            }
+            chunks.push(chunk);
+            text = text.substring(chunk.length).trim();
+        }
+
+        // เล่นเสียงทีละท่อนต่อเนื่องกัน
+        let index = 0;
+        function playNext() {
+            if (index >= chunks.length) return;
+            
+            const audioUrl = `https://translate.google.co.th/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunks[index])}&tl=th&client=tw-ob`;
+            const audio = new Audio(audioUrl);
+            audio.playbackRate = 1.0;
+            
+            // เมื่อจบท่อนนี้ ให้เล่นท่อนต่อไป
+            audio.onended = function() {
+                index++;
+                playNext();
+            };
+            
+            audio.play().catch(e => console.error("Audio error:", e));
+        }
+        playNext(); // เริ่มเล่นท่อนแรก
     }
     // -------------------------------------------------------
 
@@ -366,20 +408,18 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
 
-        // --- (NEW) เพิ่มปุ่มฟังเสียง เฉพาะฝั่ง Bot ---
+        // เพิ่มปุ่มฟังเสียง เฉพาะฝั่ง Bot
         if (sender === 'bot') {
             const ttsButton = document.createElement('button');
             ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
             
-            // เมื่อกดปุ่ม ให้เรียกฟังก์ชัน playOnlineVoice
             ttsButton.onclick = function() {
-                playOnlineVoice(text);
+                playSmartVoice(text);
             };
 
             messageDiv.appendChild(ttsButton);
         }
-        // ------------------------------------------
 
         messageGroup.appendChild(avatarDiv);
         messageGroup.appendChild(messageDiv);
@@ -409,13 +449,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามว่า 'เวลาทำการ' หรือ 'เบอร์ติดต่อ' ดูนะครับ";
     }
 
-    // ฟังก์ชันประมวลผลการส่งข้อความ (ใช้ร่วมกันทั้งพิมพ์เองและกดปุ่ม)
     window.processUserMessage = function(text) {
         if (!text) return;
 
         appendMessage("user", text);
         
-        // จำลอง Loading และตอบกลับ
         setTimeout(() => {
             appendMessage("bot", getBotResponse(text));
         }, 500);
@@ -448,7 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
     userInput.addEventListener("input", adjustTextareaHeight);
 });
 
-// ฟังก์ชันสำหรับปุ่ม Quick Menu (อยู่นอก Scope ได้ เพราะเรียก processUserMessage ผ่าน window)
 function sendQuickMessage(text) {
     if (window.processUserMessage) {
         window.processUserMessage(text);
