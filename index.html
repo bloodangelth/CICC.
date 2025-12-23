@@ -26,7 +26,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* ป้องกันการเลื่อนทั้งหน้า */
+            overflow: hidden;
         }
 
         /* --- HEADER --- */
@@ -35,7 +35,7 @@
             height: 100%;
             display: flex;
             flex-direction: column;
-            max-width: 600px; /* จำกัดความกว้างถ้ารันบนจอคอม */
+            max-width: 600px;
             margin: 0 auto;
             background: var(--chat-bg);
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -97,7 +97,6 @@
             flex-direction: row-reverse;
         }
 
-        /* รูป Avatar */
         .avatar {
             width: 40px;
             height: 40px;
@@ -106,7 +105,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            overflow: hidden; /* ตัดขอบรูปให้กลม */
+            overflow: hidden;
             background-color: #eee;
         }
 
@@ -117,18 +116,18 @@
         }
 
         .avatar-icon {
-            font-size: 24px; /* สำหรับ icon ผู้ใช้ */
+            font-size: 24px;
         }
 
-        /* กล่องข้อความ */
         .message {
-            max-width: 75%;
+            max-width: 80%; /* เพิ่มความกว้างเพื่อให้ปุ่มไม่เบียดกัน */
             padding: 12px 16px;
             border-radius: 18px;
-            font-size: 1rem; /* ขนาดตัวอักษร 16px อ่านง่าย */
+            font-size: 1rem;
             line-height: 1.5;
             word-wrap: break-word;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative; /* เพิ่มเพื่อให้จัดตำแหน่งปุ่มเสียงได้ */
         }
 
         .bot-message {
@@ -143,14 +142,64 @@
             border-top-right-radius: 4px;
         }
 
-        .suggestion code {
-            background: rgba(0,0,0,0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #d63384;
-            font-weight: bold;
-            font-size: 0.9rem;
+        /* --- Quick Menu Style --- */
+        .quick-menu {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column; /* เรียงแนวตั้ง หรือใช้ flex-wrap: wrap ถ้าอยากเรียงแนวนอน */
+            gap: 8px;
         }
+        
+        .quick-btn {
+            background-color: white;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .quick-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(187, 13, 13, 0.2);
+        }
+
+        .quick-btn i {
+            font-size: 1.1rem;
+        }
+
+        /* --- (NEW) CSS สำหรับปุ่มฟังเสียง --- */
+        .tts-btn {
+            background: transparent;
+            border: 1px solid #ccc;
+            color: #666;
+            margin-top: 8px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+
+        .tts-btn:hover {
+            background: #ddd;
+            color: #333;
+        }
+        /* ---------------------------------- */
 
         /* --- INPUT AREA --- */
         .chat-input-area {
@@ -174,7 +223,7 @@
             border: none;
             background: transparent;
             padding: 10px;
-            font-size: 16px; /* สำคัญ: 16px ป้องกัน iOS ซูม */
+            font-size: 16px;
             resize: none;
             max-height: 120px;
             outline: none;
@@ -208,14 +257,7 @@
             margin-top: 8px;
         }
 
-        /* ไอคอน FontAwesome (ถ้าไม่ได้ใช้ CDN อาจจะไม่ขึ้น ให้ใช้ Emoji แทนในปุ่มได้) */
         button i { font-size: 18px; }
-
-        /* ส่วน Upload File (เก็บไว้ด้านล่างสุด) */
-        #doc-file-input {
-            display: none; /* ซ่อนไว้ก่อน หรือจัด CSS ให้สวยถ้าต้องการใช้ */
-            margin: 10px auto;
-        }
     </style>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -232,7 +274,7 @@
                     <p>ออนไลน์ • AI Model CICC</p>
                 </div>
             </div>
-            </header>
+        </header>
 
         <div class="chat-area" id="chatArea">
             <div class="message-group bot">
@@ -240,13 +282,25 @@
                     <img src="cicc.png" alt="Bot">
                 </div>
                 <div class="message bot-message">
-                    <p>สวัสดีครับ! ผมคือ CICC Chatbot พร้อมช่วยเหลือเรื่องข้อมูลของวิทยาลัยอาชีวศึกษา</p>
-                    <p class="suggestion">
-                        คุณสามารถถามเกี่ยวกับ: <br>
-                        <code>เวลาทำการ</code>, 
-                        <code>ช่องทางติดต่อ</code>, 
-                        <code>บริการหลัก</code>
-                    </p>
+                    <p>สวัสดีครับ! ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ</p>
+                    <p>เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ 👇</p>
+                    
+                    <div class="quick-menu">
+                        <button class="quick-btn" onclick="sendQuickMessage('เวลาทำการ')">
+                            <i class="far fa-clock"></i> เวลาทำการ
+                        </button>
+                        <button class="quick-btn" onclick="sendQuickMessage('ช่องทางติดต่อ')">
+                            <i class="fas fa-phone-alt"></i> ช่องทางติดต่อ
+                        </button>
+                        <button class="quick-btn" onclick="sendQuickMessage('บริการหลัก')">
+                            <i class="fas fa-book-open"></i> บริการหลัก
+                        </button>
+                    </div>
+
+                    <button class="tts-btn" onclick="playOnlineVoice('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ')">
+                        <i class="fas fa-volume-up"></i> ฟังเสียง
+                    </button>
+
                 </div>
             </div>
         </div>
@@ -257,32 +311,51 @@
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
             </div>
             <p class="disclaimer">⚠ อาจมีข้อมูลคลาดเคลื่อน โปรดตรวจสอบข้อมูลสำคัญ</p>
-            <input type="file" id="doc-file-input" accept=".doc,.docx" style="display:none;" />
         </div>
     </div>
 
 <script>
+// ประกาศตัวแปร Global เพื่อให้เรียกใช้ได้ทั่วถึง
+let appendMessage, getBotResponse, playOnlineVoice;
+
 document.addEventListener('DOMContentLoaded', () => {
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    function appendMessage(sender, text) {
+    // --- (NEW) ฟังก์ชันเล่นเสียงออนไลน์ (ไม่ต้องง้อ Windows) ---
+    playOnlineVoice = function(text) {
+        // 1. ลบ HTML tags และตัวอักษรพิเศษออก เพื่อให้ได้ข้อความล้วน
+        let cleanText = text.replace(/<[^>]*>/g, ' '); 
+        cleanText = cleanText.replace(/&nbsp;/g, ' ');
+        cleanText = cleanText.trim();
+
+        if(!cleanText) return;
+
+        // 2. ใช้ Google Translate TTS API (Client Side Hack)
+        // client=tw-ob เป็นพารามิเตอร์สำคัญที่ทำให้เรียกผ่านเว็บได้ฟรี
+        const encodedText = encodeURIComponent(cleanText);
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=th&client=tw-ob`;
+
+        // 3. สร้าง Audio Object และเล่นเสียง
+        const audio = new Audio(audioUrl);
+        audio.play().catch(e => console.error("Error playing audio:", e));
+    }
+    // -------------------------------------------------------
+
+    appendMessage = function(sender, text) {
         const messageGroup = document.createElement('div');
         messageGroup.classList.add('message-group', sender);
 
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('avatar');
         
-        // --- ส่วนแก้ไข Logic Avatar ---
         if (sender === 'user') {
-            // ถ้าเป็น user ให้เป็นไอคอนคน
             const iconSpan = document.createElement('span');
             iconSpan.classList.add('avatar-icon');
             iconSpan.textContent = '👤'; 
             avatarDiv.appendChild(iconSpan);
         } else {
-            // ถ้าเป็น bot ให้ใส่รูป cicc.png
             const img = document.createElement('img');
             img.src = 'cicc.png';
             img.alt = 'CICC Bot';
@@ -291,31 +364,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
-        // ใช้ innerHTML เพื่อรองรับการขึ้นบรรทัดใหม่
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+
+        // --- (NEW) เพิ่มปุ่มฟังเสียง เฉพาะฝั่ง Bot ---
+        if (sender === 'bot') {
+            const ttsButton = document.createElement('button');
+            ttsButton.className = 'tts-btn';
+            ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
+            
+            // เมื่อกดปุ่ม ให้เรียกฟังก์ชัน playOnlineVoice
+            ttsButton.onclick = function() {
+                playOnlineVoice(text);
+            };
+
+            messageDiv.appendChild(ttsButton);
+        }
+        // ------------------------------------------
 
         messageGroup.appendChild(avatarDiv);
         messageGroup.appendChild(messageDiv);
         chatArea.appendChild(messageGroup);
 
-        // เลื่อนลงล่างสุด
         chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    function getBotResponse(text) {
+    getBotResponse = function(text) {
         const msg = text.toLowerCase().trim();
 
         if (msg.includes("สวัสดี") || msg.includes("หวัดดี")) {
             return "สวัสดีครับ! มีเรื่องอะไรให้ช่วยไหมครับ?";
         }
         if (msg.includes("เวลาทำการ") || msg.includes("เปิดกี่โมง")) {
-            return "🕒 เวลาทำการ:\nจันทร์ – ศุกร์\n08.30 – 16.30 น.";
+            return "🕒 <b>เวลาทำการ:</b>\nจันทร์ – ศุกร์\n08.30 – 16.30 น.\n(ปิดวันหยุดราชการ)";
         }
         if (msg.includes("ติดต่อ") || msg.includes("เบอร์") || msg.includes("โทร")) {
-            return "📞 ช่องทางติดต่อ:\n\n1. อาจารย์มอส\nโทร: 064 565 3117\nFB: facebook.com/share/1Ab3CQ799w/\n\n2. อาจารย์ A\nโทร: 064-xxx-xxx";
+            return "📞 <b>ช่องทางติดต่อ:</b>\n\n1. อาจารย์มอส\nโทร: 064 565 3117\nFB: <a href='https://facebook.com/share/1Ab3CQ799w/' target='_blank'>คลิกเพื่อดูเฟสบุ๊ค</a>\n\n2. อาจารย์ A\nโทร: 064-xxx-xxx";
         }
         if (msg.includes("บริการ") || msg.includes("ทำอะไรได้บ้าง")) {
-            return "📚 บริการหลัก:\n• การให้คำปรึกษา\n• งานทะเบียน\n• งานวิชาการ\n• งานกิจการนักศึกษา";
+            return "📚 <b>บริการหลัก:</b>\n• การให้คำปรึกษาปัญหาการเรียน\n• งานทะเบียนและวัดผล\n• งานวิชาการและหลักสูตร\n• งานกิจกรรมนักศึกษา";
         }
         if (msg.includes("ขอบคุณ")) {
             return "ยินดีครับ! มีอะไรถามเพิ่มได้เลยนะครับ 😊";
@@ -323,18 +409,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามว่า 'เวลาทำการ' หรือ 'เบอร์ติดต่อ' ดูนะครับ";
     }
 
-    function sendMessage() {
-        const text = userInput.value.trim();
+    // ฟังก์ชันประมวลผลการส่งข้อความ (ใช้ร่วมกันทั้งพิมพ์เองและกดปุ่ม)
+    window.processUserMessage = function(text) {
         if (!text) return;
 
         appendMessage("user", text);
-        userInput.value = "";
-        adjustTextareaHeight();
-
-        // จำลองการพิมพ์ (Loading) นิดหน่อยก็ได้ แต่ใส่ Timeout ไว้เหมือนเดิม
+        
+        // จำลอง Loading และตอบกลับ
         setTimeout(() => {
             appendMessage("bot", getBotResponse(text));
         }, 500);
+    }
+
+    function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+        
+        userInput.value = "";
+        adjustTextareaHeight();
+        processUserMessage(text);
     }
 
     sendBtn.addEventListener("click", sendMessage);
@@ -349,12 +442,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function adjustTextareaHeight() {
         userInput.style.height = "auto";
         userInput.style.height = userInput.scrollHeight + "px";
-        // รีเซ็ตความสูงถ้าน้อยกว่าค่าเริ่มต้น (เพื่อไม่ให้ค้างตอนลบข้อความ)
         if(userInput.value === '') userInput.style.height = 'auto';
     }
 
     userInput.addEventListener("input", adjustTextareaHeight);
 });
+
+// ฟังก์ชันสำหรับปุ่ม Quick Menu (อยู่นอก Scope ได้ เพราะเรียก processUserMessage ผ่าน window)
+function sendQuickMessage(text) {
+    if (window.processUserMessage) {
+        window.processUserMessage(text);
+    }
+}
 </script>
 
 </body>
