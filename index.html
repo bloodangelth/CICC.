@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CICC Chatbot</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -26,13 +31,13 @@
 
         <header class="chatbot-header">
             <div class="header-content">
-                <img src="cicc.png" class="logo" alt="CICC Logo">
+                <img src="cicc.png" class="logo" alt="CICC Logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'">
                 <div class="title-group">
                     <h3>CICC Chatbot</h3>
                     <p>ออนไลน์ • AI Model CICC</p>
                 </div>
             </div>
-            <a href="admin.html" class="admin-link" title="ตั้งค่าคำตอบ (Admin)">
+            <a href="admin.html" class="admin-link" title="ตั้งค่าคำตอบ">
                 <i class="fas fa-cog"></i>
             </a>
         </header>
@@ -40,13 +45,13 @@
         <div class="chat-area" id="chatArea">
             <div class="message-group bot">
                 <div class="avatar">
-                    <img src="cicc.png" alt="Bot">
+                    <img src="cicc.png" alt="Bot" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'">
                 </div>
                 <div class="message bot-message">
                     <p>สวัสดีครับ! ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ</p>
                     <p>เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ 👇</p>
                     
-                    <button class="tts-btn" onclick="speakThai('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ')">
+                    <button class="tts-btn" onclick="playFinalVoice('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ')">
                         <i class="fas fa-volume-up"></i> ฟังเสียง
                     </button>
                 </div>
@@ -55,6 +60,7 @@
 
         <div class="chat-input-area">
             <div class="quick-menu-bar" id="quickMenuBar"></div>
+
             <div class="chat-input-wrapper">
                 <textarea id="userInput" placeholder="พิมพ์ข้อความ..." rows="1"></textarea>
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
@@ -63,141 +69,119 @@
         </div>
     </div>
 
-<script>
-// --- ระบบเสียงแบบ Native (เสถียรที่สุด ไม่ใช้ Google) ---
-let voices = [];
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-function loadVoices() {
-    // โหลดรายการเสียงเตรียมไว้
-    voices = window.speechSynthesis.getVoices();
-    console.log("Loaded voices:", voices.length);
-}
+    // --- 1. ตั้งค่า Firebase (ชุดเดียวกับ Admin) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBs-1OF_k_iUsydZF5DjLFRnv0fcTAJxiE",
+      authDomain: "cicc-91f0b.firebaseapp.com",
+      databaseURL: "https://cicc-91f0b-default-rtdb.firebaseio.com",
+      projectId: "cicc-91f0b",
+      storageBucket: "cicc-91f0b.firebasestorage.app",
+      messagingSenderId: "596317132498",
+      appId: "1:596317132498:web:e5c4bc56a55d26940e7f0b",
+      measurementId: "G-GK5FB9CCRF"
+    };
 
-// สั่งให้ Browser โหลดเสียงทันทีที่เปิดเว็บ (แก้บั๊ก Chrome/Android โหลดช้า)
-if ('speechSynthesis' in window) {
-    loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-}
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-function speakThai(text) {
-    // 1. ตรวจสอบการรองรับ
-    if (!('speechSynthesis' in window)) {
-        alert("อุปกรณ์นี้ไม่รองรับการอ่านเสียง");
-        return;
+    // ตัวแปรเก็บข้อมูลบอท
+    let botData = [];
+    let currentAudio = null;
+
+    // --- 2. ฟังก์ชันโหลดข้อมูล Realtime จาก Firebase ---
+    function startApp() {
+        // ดึงข้อมูลคำตอบ (Bot Data)
+        onValue(ref(db, 'cicc_bot_data'), (snapshot) => {
+            botData = snapshot.val() || [];
+            console.log("Updated Bot Data:", botData);
+        });
+
+        // ดึงปุ่มเมนูลัด (Quick Buttons)
+        onValue(ref(db, 'cicc_quick_btns'), (snapshot) => {
+            const btns = snapshot.val() || [];
+            renderQuickButtons(btns);
+        });
+
+        // ดึงการแจ้งเตือน (Notification)
+        onValue(ref(db, 'cicc_notification'), (snapshot) => {
+            const notif = snapshot.val() || {active: false, message: ""};
+            updateNotification(notif);
+        });
+
+        // บันทึกสถิติการเข้าชม (ส่งไป Firebase เพื่อให้ Admin เห็นกราฟ)
+        push(ref(db, 'cicc_visit_logs'), new Date().toISOString());
     }
 
-    // 2. หยุดเสียงเก่า
-    window.speechSynthesis.cancel();
-
-    // 3. สร้างคำพูด
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;  // ความเร็วปกติ
-    utterance.volume = 1.0; // ความดังสูงสุด
-
-    // 4. ค้นหาเสียงไทย (แบบละเอียดที่สุด)
-    // ลองหาเสียงที่มีรหัส th-TH หรือมีคำว่า Thai
-    let thaiVoice = voices.find(v => v.lang === 'th-TH' || v.lang === 'th_TH');
-    
-    if (!thaiVoice) {
-        // ถ้าหาตรงๆ ไม่เจอ ลองหาจากชื่อ (สำหรับบาง Android)
-        thaiVoice = voices.find(v => v.name.toLowerCase().includes('thai'));
+    // --- 3. ฟังก์ชัน Render หน้าจอ ---
+    function renderQuickButtons(buttons) {
+        const bar = document.getElementById('quickMenuBar');
+        bar.innerHTML = '';
+        buttons.forEach(btn => {
+            const button = document.createElement('button');
+            button.className = 'quick-btn';
+            // ใช้ window.processUserMessage เพื่อส่งข้อความ
+            button.onclick = () => window.processUserMessage(btn.message);
+            button.innerHTML = `<i class="${btn.icon}"></i> ${btn.label}`;
+            bar.appendChild(button);
+        });
     }
 
-    // 5. ตั้งค่าเสียง
-    if (thaiVoice) {
-        utterance.voice = thaiVoice;
-        utterance.lang = 'th-TH'; // สำคัญมาก ต้องระบุ
-        // console.log("ใช้เสียงไทย:", thaiVoice.name);
-    } else {
-        // ถ้าไม่เจอเสียงไทยจริงๆ ให้บังคับ Lang code ไปเลย (เผื่อ OS ฉลาดพอจะหาให้)
-        console.log("ไม่เจอเสียงไทยในลิสต์ แต่จะบังคับ th-TH");
-        utterance.lang = 'th-TH';
+    function updateNotification(notifData) {
+        const bar = document.getElementById('notificationBar');
+        const text = document.getElementById('notifText');
+        if (notifData.active && notifData.message) {
+            text.textContent = notifData.message;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
     }
 
-    // 6. พูดเลย
-    window.speechSynthesis.speak(utterance);
-}
-
-// --- ฟังก์ชันอื่นๆ (คงเดิม) ---
-function recordVisit() {
-    const STORAGE_KEY = 'cicc_visit_logs';
-    let logs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    logs.push(new Date().toISOString());
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-}
-
-function loadNotification() {
-    const NOTIF_KEY = 'cicc_notification';
-    const notifData = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{"active": false, "message": ""}');
-    const bar = document.getElementById('notificationBar');
-    const text = document.getElementById('notifText');
-    if (notifData.active && notifData.message) {
-        text.textContent = notifData.message;
-        bar.style.display = 'flex';
-    } else {
-        bar.style.display = 'none';
-    }
-}
-
-function closeNotification() {
-    document.getElementById('notificationBar').style.display = 'none';
-}
-
-function renderQuickButtons() {
-    const bar = document.getElementById('quickMenuBar');
-    const defaultBtns = [
-        { label: "เวลาทำการ", icon: "far fa-clock", message: "เวลาทำการ" },
-        { label: "ช่องทางติดต่อ", icon: "fas fa-phone-alt", message: "ช่องทางติดต่อ" },
-        { label: "บริการหลัก", icon: "fas fa-book-open", message: "บริการหลัก" }
-    ];
-    const buttons = JSON.parse(localStorage.getItem('cicc_quick_btns') || JSON.stringify(defaultBtns));
-    bar.innerHTML = '';
-    buttons.forEach(btn => {
-        const button = document.createElement('button');
-        button.className = 'quick-btn';
-        button.onclick = () => sendQuickMessage(btn.message);
-        button.innerHTML = `<i class="${btn.icon}"></i> ${btn.label}`;
-        bar.appendChild(button);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    recordVisit();
-    renderQuickButtons();
-    loadNotification();
-
-    const chatArea = document.getElementById('chatArea');
-    const userInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    // โหลดข้อมูล Chatbot
-    const defaultBotData = [
-        { keywords: ["สวัสดี", "หวัดดี"], response: "สวัสดีครับ! มีเรื่องอะไรให้ช่วยไหมครับ?" },
-        { keywords: ["เวลาทำการ"], response: "🕒 <b>เวลาทำการ:</b><br>จันทร์ – ศุกร์<br>08.30 – 16.30 น." },
-        { keywords: ["ติดต่อ"], response: "📞 <b>ติดต่อ:</b><br>โทร: 064 565 3117" }
-    ];
-
-    function loadBotData() {
-        const stored = localStorage.getItem('cicc_bot_data');
-        return stored ? JSON.parse(stored) : defaultBotData;
+    // --- 4. Logic แชทบอท ---
+    window.processUserMessage = function(text) {
+        if (!text) return;
+        appendMessage("user", text);
+        
+        // จำลองการพิมพ์...
+        setTimeout(() => {
+            const response = getBotResponse(text);
+            appendMessage("bot", response);
+        }, 600);
     }
 
-    // ฟังก์ชันสร้างกล่องข้อความ
-    window.appendMessage = function(sender, text) {
+    function getBotResponse(text) {
+        const msg = text.toLowerCase().trim();
+        // ค้นหาคำตอบจาก botData ที่ดึงมาจาก Firebase
+        for (let item of botData) {
+            // เช็คว่ามี keywords หรือไม่ (กัน error)
+            if(item.keywords && Array.isArray(item.keywords)){
+                for (let keyword of item.keywords) {
+                    if (msg.includes(keyword.toLowerCase())) return item.response;
+                }
+            }
+        }
+        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามสั้นๆ หรือเลือกเมนูด้านล่างดูนะครับ";
+    }
+
+    function appendMessage(sender, text) {
+        const chatArea = document.getElementById('chatArea');
         const messageGroup = document.createElement('div');
         messageGroup.classList.add('message-group', sender);
 
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('avatar');
+        
+        // รูป Avatar
         if (sender === 'user') {
-            const iconSpan = document.createElement('span');
-            iconSpan.classList.add('avatar-icon');
-            iconSpan.textContent = '👤'; 
-            avatarDiv.appendChild(iconSpan);
+            avatarDiv.innerHTML = '<span class="avatar-icon">👤</span>';
         } else {
             const img = document.createElement('img');
             img.src = 'cicc.png';
-            img.alt = 'CICC Bot';
+            img.onerror = function() { this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'; }; // รูปสำรอง
             avatarDiv.appendChild(img);
         }
 
@@ -205,67 +189,70 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
 
-        // เพิ่มปุ่มฟังเสียงเฉพาะข้อความของบอท
         if (sender === 'bot') {
             const ttsButton = document.createElement('button');
             ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
-            
-            // ดึงข้อความเพียวๆ ตัด HTML tag ออกเพื่อให้อ่านรู้เรื่อง
-            let plainText = text.replace(/<[^>]*>/g, ' ');
-            ttsButton.onclick = function() { speakThai(plainText); };
-            
+            ttsButton.onclick = function() { window.playFinalVoice(text); };
             messageDiv.appendChild(ttsButton);
         }
 
         messageGroup.appendChild(avatarDiv);
         messageGroup.appendChild(messageDiv);
         chatArea.appendChild(messageGroup);
-        chatArea.scrollTop = chatArea.scrollHeight;
+        chatArea.scrollTop = chatArea.scrollHeight; // เลื่อนลงล่างสุด
     }
 
-    // Logic ตอบกลับ
-    window.getBotResponse = function(text) {
-        const msg = text.toLowerCase().trim();
-        const botData = loadBotData();
-        for (let item of botData) {
-            for (let keyword of item.keywords) {
-                if (msg.includes(keyword.toLowerCase())) return item.response;
-            }
-        }
-        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามสั้นๆ เช่น 'เวลาทำการ' หรือ 'เบอร์ติดต่อ' ดูนะครับ";
-    }
-
-    window.processUserMessage = function(text) {
-        if (!text) return;
-        appendMessage("user", text);
-        setTimeout(() => { appendMessage("bot", getBotResponse(text)); }, 500);
-    }
+    // --- 5. จัดการ Input และ Event ---
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
 
     function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
         userInput.value = "";
-        adjustTextareaHeight();
-        processUserMessage(text);
+        userInput.style.height = "auto"; // Reset height
+        window.processUserMessage(text);
     }
 
     sendBtn.addEventListener("click", sendMessage);
     userInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        if (e.key === "Enter" && !e.shiftKey) { 
+            e.preventDefault(); 
+            sendMessage(); 
+        }
+    });
+    userInput.addEventListener("input", function() {
+        this.style.height = "auto";
+        this.style.height = this.scrollHeight + "px";
     });
 
-    function adjustTextareaHeight() {
-        userInput.style.height = "auto";
-        userInput.style.height = userInput.scrollHeight + "px";
-        if(userInput.value === '') userInput.style.height = 'auto';
-    }
-    userInput.addEventListener("input", adjustTextareaHeight);
-});
+    // --- 6. ระบบเสียง (TTS) ---
+    window.playFinalVoice = function(text) {
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
-function sendQuickMessage(text) {
-    if (window.processUserMessage) window.processUserMessage(text);
-}
+        let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+        if(!cleanText) return;
+
+        // ใช้ Google Translate TTS API
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText.substring(0,100))}&tl=th&client=tw-ob`;
+        currentAudio = new Audio(url);
+        currentAudio.play().catch(e => {
+            // ถ้าเล่นไม่ได้ ให้ใช้เสียงของ Browser
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'th-TH';
+            window.speechSynthesis.speak(utterance);
+        });
+    }
+
+    // ฟังก์ชันปิด Notification
+    window.closeNotification = function() {
+        document.getElementById('notificationBar').style.display = 'none';
+    }
+
+    // เริ่มทำงานเมื่อโหลดเสร็จ
+    document.addEventListener('DOMContentLoaded', startApp);
 </script>
 
 </body>
