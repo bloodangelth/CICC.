@@ -64,53 +64,60 @@
     </div>
 
 <script>
-// --- ส่วนจัดการระบบเสียง (เขียนใหม่ให้เสถียรที่สุด) ---
-function speakThai(text) {
-    // 1. หยุดเสียงเก่าที่อาจค้างอยู่
-    window.speechSynthesis.cancel();
+// --- ระบบเสียงแบบ Native (เสถียรที่สุด ไม่ใช้ Google) ---
+let voices = [];
 
-    // 2. ตรวจสอบว่า Browser รองรับไหม
+function loadVoices() {
+    // โหลดรายการเสียงเตรียมไว้
+    voices = window.speechSynthesis.getVoices();
+}
+
+// สั่งให้ Browser โหลดเสียงทันทีที่เปิดเว็บ
+if ('speechSynthesis' in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function speakThai(text) {
+    // 1. ตรวจสอบการรองรับ
     if (!('speechSynthesis' in window)) {
-        alert("อุปกรณ์ของคุณไม่รองรับการอ่านเสียง");
+        alert("อุปกรณ์นี้ไม่รองรับการอ่านเสียง");
         return;
     }
 
-    // 3. ฟังก์ชันสำหรับเริ่มพูด
-    const doSpeak = () => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;  // ความเร็วปกติ
-        utterance.pitch = 1.0; // ระดับเสียงปกติ
-        utterance.volume = 1.0; // ความดัง
+    // 2. หยุดเสียงเก่า
+    window.speechSynthesis.cancel();
 
-        // 4. ค้นหาเสียงภาษาไทยในเครื่อง
-        const voices = window.speechSynthesis.getVoices();
-        // หาเสียงที่มีรหัส th-TH หรือมีคำว่า Thai ในชื่อ
-        const thaiVoice = voices.find(v => v.lang === 'th-TH' || v.lang.includes('th') || v.name.toLowerCase().includes('thai'));
+    // 3. สร้างคำพูด
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;  // ความเร็วปกติ
+    utterance.volume = 1.0; // ความดังสูงสุด
 
-        if (thaiVoice) {
-            utterance.voice = thaiVoice;
-            utterance.lang = 'th-TH'; // บังคับภาษา
-            console.log("ใช้เสียง:", thaiVoice.name);
-        } else {
-            console.warn("ไม่พบเสียงไทยในเครื่อง (จะพยายามใช้ Default)");
-            // ถึงไม่เจอเสียง ก็จะพยายามบังคับ Lang code ส่งไป
-            utterance.lang = 'th-TH';
-        }
-
-        window.speechSynthesis.speak(utterance);
-    };
-
-    // 5. เทคนิคแก้บั๊ก Chrome/Android: รอให้เสียงโหลดเสร็จก่อนค่อยพูด
-    if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.addEventListener('voiceschanged', () => {
-            doSpeak();
-        }, { once: true });
-    } else {
-        doSpeak();
+    // 4. ค้นหาเสียงไทย (แบบละเอียด)
+    // ลองหาเสียงที่มีรหัส th-TH หรือมีคำว่า Thai
+    let thaiVoice = voices.find(v => v.lang === 'th-TH' || v.lang === 'th_TH');
+    
+    if (!thaiVoice) {
+        // ถ้าหาตรงๆ ไม่เจอ ลองหาจากชื่อ
+        thaiVoice = voices.find(v => v.name.toLowerCase().includes('thai'));
     }
+
+    // 5. ตั้งค่าเสียง
+    if (thaiVoice) {
+        utterance.voice = thaiVoice;
+        utterance.lang = 'th-TH'; // สำคัญมาก ต้องระบุ
+        console.log("เจอเสียงไทย:", thaiVoice.name);
+    } else {
+        // ถ้าไม่เจอเสียงไทยจริงๆ ให้ลองบังคับ Lang code ดู (บางเครื่องยอม)
+        console.log("ไม่เจอเสียงไทยในลิสต์ แต่จะลองบังคับ th-TH");
+        utterance.lang = 'th-TH';
+    }
+
+    // 6. พูดเลย
+    window.speechSynthesis.speak(utterance);
 }
 
-// --- ส่วนจัดการสถิติและการแสดงผล (คงเดิม) ---
+// --- ฟังก์ชันอื่นๆ (คงเดิม) ---
 function recordVisit() {
     const STORAGE_KEY = 'cicc_visit_logs';
     let logs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -162,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // โหลดข้อมูล Chatbot
     const defaultBotData = [
         { keywords: ["สวัสดี", "หวัดดี"], response: "สวัสดีครับ! มีเรื่องอะไรให้ช่วยไหมครับ?" },
         { keywords: ["เวลาทำการ"], response: "🕒 <b>เวลาทำการ:</b><br>จันทร์ – ศุกร์<br>08.30 – 16.30 น." },
@@ -197,14 +203,14 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
 
-        // เพิ่มปุ่มฟังเสียงเฉพาะข้อความของบอท
+        // เพิ่มปุ่มฟังเสียง
         if (sender === 'bot') {
             const ttsButton = document.createElement('button');
             ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
             
-            // ดึงข้อความเพียวๆ ตัด HTML tag ออกเพื่อให้อ่านรู้เรื่อง
-            let plainText = text.replace(/<[^>]*>/g, ' ');
+            // ส่งข้อความล้วนๆ เข้าฟังก์ชัน speakThai
+            let plainText = text.replace(/<[^>]*>/g, ' '); 
             ttsButton.onclick = function() { speakThai(plainText); };
             
             messageDiv.appendChild(ttsButton);
