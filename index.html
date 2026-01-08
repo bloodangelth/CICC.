@@ -5,267 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CICC Chatbot</title>
 
-    <style>
-        :root {
-            --primary-color: #bb0d0d;
-            --bg-color: #f4f4f9;
-            --chat-bg: #ffffff;
-            --user-msg-bg: #0056b3;
-            --bot-msg-bg: #e9ecef;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* --- HEADER --- */
-        .chatbot-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            max-width: 600px;
-            margin: 0 auto;
-            background: var(--chat-bg);
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-
-        .chatbot-header {
-            background: var(--primary-color);
-            color: white;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 5px rgba(209, 18, 18, 0.1);
-            z-index: 10;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: white;
-            padding: 2px;
-        }
-
-        .title-group h3 {
-            font-size: 1.2rem;
-            margin-bottom: 2px;
-        }
-
-        .title-group p {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-
-        /* --- CHAT AREA --- */
-        .chat-area {
-            flex: 1;
-            padding: 20px;
-            padding-bottom: 10px; /* ลด padding ล่างนิดหน่อยเพราะมีเมนูลอย */
-            overflow-y: auto;
-            background: #fff;
-            scroll-behavior: smooth;
-        }
-
-        .message-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: flex-start;
-        }
-
-        .message-group.user {
-            flex-direction: row-reverse;
-        }
-
-        .avatar {
-            width: 40px;
-            height: 40px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            overflow: hidden;
-            background-color: #eee;
-        }
-
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .avatar-icon {
-            font-size: 24px;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 1rem;
-            line-height: 1.5;
-            word-wrap: break-word;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            position: relative;
-        }
-
-        .bot-message {
-            background-color: var(--bot-msg-bg);
-            color: #333;
-            border-top-left-radius: 4px;
-        }
-
-        .user-message {
-            background-color: var(--user-msg-bg);
-            color: white;
-            border-top-right-radius: 4px;
-        }
-
-        /* --- (UPDATED) Quick Menu Bar Style --- */
-        /* ย้ายมาไว้ด้านล่าง เหนือช่องพิมพ์ */
-        .quick-menu-bar {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto; /* เลื่อนแนวนอนได้ถ้าปุ่มเยอะ */
-            padding-bottom: 10px;
-            white-space: nowrap;
-            /* ซ่อน Scrollbar ให้สวยงาม */
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none;  /* IE 10+ */
-        }
-        .quick-menu-bar::-webkit-scrollbar { 
-            display: none; /* Chrome/Safari */
-        }
-        
-        .quick-btn {
-            background-color: white;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 6px 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-shrink: 0; /* ไม่ให้ปุ่มหด */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .quick-btn:hover {
-            background-color: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .quick-btn i {
-            font-size: 1rem;
-        }
-
-        /* --- CSS ปุ่มฟังเสียง --- */
-        .tts-btn {
-            background: transparent;
-            border: 1px solid #ccc;
-            color: #666;
-            margin-top: 8px;
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            border-radius: 12px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            transition: 0.2s;
-        }
-        .tts-btn:hover {
-            background: #ddd;
-            color: #333;
-        }
-
-        /* --- INPUT AREA --- */
-        .chat-input-area {
-            padding: 10px 15px 15px 15px; /* ปรับ Padding */
-            background: white;
-            border-top: 1px solid #eee;
-            display: flex;
-            flex-direction: column; /* จัดเรียงแนวตั้ง เพื่อเอาเมนูไว้บนกล่องพิมพ์ */
-        }
-
-        .chat-input-wrapper {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 25px;
-            border: 1px solid #ddd;
-        }
-
-        textarea {
-            flex: 1;
-            border: none;
-            background: transparent;
-            padding: 10px;
-            font-size: 16px;
-            resize: none;
-            max-height: 120px;
-            outline: none;
-        }
-
-        #sendBtn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-            flex-shrink: 0;
-            margin-bottom: 2px;
-        }
-
-        #sendBtn:hover {
-            opacity: 0.9;
-            transform: scale(1.05);
-        }
-
-        .disclaimer {
-            font-size: 0.75rem;
-            color: #888;
-            text-align: center;
-            margin-top: 8px;
-        }
-
-        button i { font-size: 18px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -273,6 +13,18 @@
 <body>
     <div class="chatbot-container">
         
+        <div id="notificationBar" class="notification-bar">
+            <div class="notif-content">
+                <i class="fas fa-bullhorn"></i>
+                <div class="marquee-wrapper">
+                    <span class="marquee-text" id="notifText">ประกาศ: ...</span>
+                </div>
+            </div>
+            <button class="notif-close" onclick="closeNotification()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
         <header class="chatbot-header">
             <div class="header-content">
                 <img src="cicc.png" class="logo" alt="CICC Logo">
@@ -281,6 +33,9 @@
                     <p>ออนไลน์ • AI Model CICC</p>
                 </div>
             </div>
+            <a href="admin.html" class="admin-link" title="ตั้งค่าคำตอบ (Admin)">
+                <i class="fas fa-cog"></i>
+            </a>
         </header>
 
         <div class="chat-area" id="chatArea">
@@ -301,17 +56,8 @@
 
         <div class="chat-input-area">
             
-            <div class="quick-menu-bar">
-                <button class="quick-btn" onclick="sendQuickMessage('เวลาทำการ')">
-                    <i class="far fa-clock"></i> เวลาทำการ
-                </button>
-                <button class="quick-btn" onclick="sendQuickMessage('ช่องทางติดต่อ')">
-                    <i class="fas fa-phone-alt"></i> ช่องทางติดต่อ
-                </button>
-                <button class="quick-btn" onclick="sendQuickMessage('บริการหลัก')">
-                    <i class="fas fa-book-open"></i> บริการหลัก
-                </button>
-            </div>
+            <div class="quick-menu-bar" id="quickMenuBar"></div>
+
             <div class="chat-input-wrapper">
                 <textarea id="userInput" placeholder="พิมพ์ข้อความ..." rows="1"></textarea>
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
@@ -324,12 +70,71 @@
 let appendMessage, getBotResponse, playFinalVoice;
 let currentAudio = null;
 
+function recordVisit() {
+    const STORAGE_KEY = 'cicc_visit_logs';
+    let logs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    logs.push(new Date().toISOString());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+}
+
+// --- ฟังก์ชันแสดงการแจ้งเตือน ---
+function loadNotification() {
+    const NOTIF_KEY = 'cicc_notification';
+    const notifData = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{"active": false, "message": ""}');
+    
+    const bar = document.getElementById('notificationBar');
+    const text = document.getElementById('notifText');
+
+    if (notifData.active && notifData.message) {
+        text.textContent = notifData.message;
+        bar.style.display = 'flex';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function closeNotification() {
+    document.getElementById('notificationBar').style.display = 'none';
+}
+
+function renderQuickButtons() {
+    const bar = document.getElementById('quickMenuBar');
+    const defaultBtns = [
+        { label: "เวลาทำการ", icon: "far fa-clock", message: "เวลาทำการ" },
+        { label: "ช่องทางติดต่อ", icon: "fas fa-phone-alt", message: "ช่องทางติดต่อ" },
+        { label: "บริการหลัก", icon: "fas fa-book-open", message: "บริการหลัก" }
+    ];
+    const buttons = JSON.parse(localStorage.getItem('cicc_quick_btns') || JSON.stringify(defaultBtns));
+    bar.innerHTML = '';
+    buttons.forEach(btn => {
+        const button = document.createElement('button');
+        button.className = 'quick-btn';
+        button.onclick = () => sendQuickMessage(btn.message);
+        button.innerHTML = `<i class="${btn.icon}"></i> ${btn.label}`;
+        bar.appendChild(button);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    recordVisit();
+    renderQuickButtons();
+    loadNotification(); // เช็คการแจ้งเตือนตอนเปิด
+
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    // --- ระบบเสียง (เหมือนเดิม) ---
+    const defaultBotData = [
+        { keywords: ["สวัสดี", "หวัดดี"], response: "สวัสดีครับ! มีเรื่องอะไรให้ช่วยไหมครับ?" },
+        { keywords: ["เวลาทำการ"], response: "🕒 <b>เวลาทำการ:</b><br>จันทร์ – ศุกร์<br>08.30 – 16.30 น." },
+        { keywords: ["ติดต่อ"], response: "📞 <b>ติดต่อ:</b><br>โทร: 064 565 3117" }
+    ];
+
+    function loadBotData() {
+        const stored = localStorage.getItem('cicc_bot_data');
+        return stored ? JSON.parse(stored) : defaultBotData;
+    }
+
     playFinalVoice = function(text) {
         if (currentAudio) {
             currentAudio.pause();
@@ -338,17 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
         }
-
         let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
         if(!cleanText) return;
-
         playGoogleQueue(cleanText);
     }
 
     function playGoogleQueue(text) {
         const MAX_LEN = 100; 
         let sentences = [];
-        
         while (text.length > 0) {
             let chunk = text.substring(0, MAX_LEN);
             let lastSpace = chunk.lastIndexOf(' ');
@@ -356,34 +158,17 @@ document.addEventListener('DOMContentLoaded', () => {
             sentences.push(chunk);
             text = text.substring(chunk.length).trim();
         }
-
         let index = 0;
-        
         function playNextChunk() {
             if (index >= sentences.length) return; 
-
             let chunk = sentences[index];
             let url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=th&client=tw-ob`;
-            
             let audio = new Audio(url);
             currentAudio = audio; 
-
-            audio.onended = function() {
-                index++;
-                playNextChunk();
-            };
-
-            audio.onerror = function() {
-                console.log("Google Voice Failed, switching to Native.");
-                playNativeFallback(sentences.slice(index).join(" ")); 
-            };
-
+            audio.onended = function() { index++; playNextChunk(); };
+            audio.onerror = function() { playNativeFallback(sentences.slice(index).join(" ")); };
             let playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    playNativeFallback(sentences.slice(index).join(" "));
-                });
-            }
+            if (playPromise !== undefined) { playPromise.catch(error => { playNativeFallback(sentences.slice(index).join(" ")); }); }
         }
         playNextChunk();
     }
@@ -406,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const avatarDiv = document.createElement('div');
         avatarDiv.classList.add('avatar');
-        
         if (sender === 'user') {
             const iconSpan = document.createElement('span');
             iconSpan.classList.add('avatar-icon');
@@ -418,21 +202,16 @@ document.addEventListener('DOMContentLoaded', () => {
             img.alt = 'CICC Bot';
             avatarDiv.appendChild(img);
         }
-
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
-
         if (sender === 'bot') {
             const ttsButton = document.createElement('button');
             ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
-            ttsButton.onclick = function() {
-                playFinalVoice(text);
-            };
+            ttsButton.onclick = function() { playFinalVoice(text); };
             messageDiv.appendChild(ttsButton);
         }
-
         messageGroup.appendChild(avatarDiv);
         messageGroup.appendChild(messageDiv);
         chatArea.appendChild(messageGroup);
@@ -441,31 +220,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     getBotResponse = function(text) {
         const msg = text.toLowerCase().trim();
-
-        if (msg.includes("สวัสดี") || msg.includes("หวัดดี")) {
-            return "สวัสดีครับ! มีเรื่องอะไรให้ช่วยไหมครับ?";
+        const botData = loadBotData();
+        for (let item of botData) {
+            for (let keyword of item.keywords) {
+                if (msg.includes(keyword.toLowerCase())) return item.response;
+            }
         }
-        if (msg.includes("เวลาทำการ") || msg.includes("เปิดกี่โมง")) {
-            return "🕒 <b>เวลาทำการ:</b>\nจันทร์ – ศุกร์\n08.30 – 16.30 น.\n(ปิดวันหยุดราชการ)";
-        }
-        if (msg.includes("ติดต่อ") || msg.includes("เบอร์") || msg.includes("โทร")) {
-            return "📞 <b>ช่องทางติดต่อ:</b>\n\n1. อาจารย์มอส\nโทร: 064 565 3117\nFB: <a href='https://facebook.com/share/1Ab3CQ799w/' target='_blank'>คลิกเพื่อดูเฟสบุ๊ค</a>\n\n2. อาจารย์ A\nโทร: 064-xxx-xxx";
-        }
-        if (msg.includes("บริการ") || msg.includes("ทำอะไรได้บ้าง")) {
-            return "📚 <b>บริการหลัก:</b>\n• การให้คำปรึกษาปัญหาการเรียน\n• งานทะเบียนและวัดผล\n• งานวิชาการและหลักสูตร\n• งานกิจกรรมนักศึกษา";
-        }
-        if (msg.includes("ขอบคุณ")) {
-            return "ยินดีครับ! มีอะไรถามเพิ่มได้เลยนะครับ 😊";
-        }
-        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามว่า 'เวลาทำการ' หรือ 'เบอร์ติดต่อ' ดูนะครับ";
+        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ \nลองถามสั้นๆ เช่น 'เวลาทำการ' หรือ 'เบอร์ติดต่อ' ดูนะครับ";
     }
 
     window.processUserMessage = function(text) {
         if (!text) return;
         appendMessage("user", text);
-        setTimeout(() => {
-            appendMessage("bot", getBotResponse(text));
-        }, 500);
+        setTimeout(() => { appendMessage("bot", getBotResponse(text)); }, 500);
     }
 
     function sendMessage() {
@@ -479,10 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendBtn.addEventListener("click", sendMessage);
 
     userInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
     function adjustTextareaHeight() {
@@ -495,9 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function sendQuickMessage(text) {
-    if (window.processUserMessage) {
-        window.processUserMessage(text);
-    }
+    if (window.processUserMessage) window.processUserMessage(text);
 }
 </script>
 

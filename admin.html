@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CICC Admin Panel</title>
+    
+    <link rel="stylesheet" href="style1.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h3><i class="fas fa-lock"></i> Admin Login</h3>
+        <input type="password" id="adminPassword" placeholder="รหัส: 1234" style="width:100%; margin-bottom:10px; padding:10px;" onkeydown="if(event.key==='Enter') checkPassword()">
+        <button class="btn-save" onclick="checkPassword()">เข้าสู่ระบบ</button>
+    </div>
+</div>
+
+<div class="container" id="mainContainer">
+    <h2>
+        <span><i class="fas fa-chart-line"></i> แดชบอร์ด & ตั้งค่า</span>
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> กลับหน้าแชท</a>
+    </h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h4><i class="fas fa-calendar-day"></i> เข้าใช้งานวันนี้</h4>
+            <div class="number" id="statToday">0</div>
+        </div>
+        <div class="stat-card">
+            <h4><i class="fas fa-calendar-alt"></i> เดือนนี้</h4>
+            <div class="number" id="statMonth">0</div>
+        </div>
+        <div class="stat-card">
+            <h4><i class="fas fa-users"></i> รวมทั้งหมด</h4>
+            <div class="number" id="statTotal">0</div>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <div class="chart-header">
+            <h4 id="chartTitle" style="margin:0">กราฟแสดงผล</h4>
+            <div class="chart-toggles">
+                <button id="btnDaily" class="active" onclick="updateChart('daily')">รายวัน</button>
+                <button id="btnMonthly" onclick="updateChart('monthly')">รายเดือน</button>
+            </div>
+        </div>
+        <canvas id="usageChart" height="100"></canvas>
+    </div>
+
+    <h3 class="section-header"><i class="fas fa-bullhorn"></i> แถบแจ้งเตือนกิจกรรม (Notification)</h3>
+    <div class="notif-box">
+        <div class="switch-label">
+            <label class="switch">
+                <input type="checkbox" id="notifActive">
+                <span class="slider"></span>
+            </label>
+            <span id="notifStatusText">ปิดการใช้งาน</span>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label>ข้อความแจ้งเตือน:</label>
+            <input type="text" id="notifMessage" placeholder="เช่น 📢 วันศุกร์นี้มีกิจกรรม Open House งดการเรียนการสอน">
+        </div>
+        <button class="btn-save" onclick="saveNotification()"><i class="fas fa-save"></i> บันทึกการแจ้งเตือน</button>
+    </div>
+
+
+    <h3 class="section-header"><i class="fas fa-robot"></i> จัดการคำตอบ & สร้างปุ่มเมนู</h3>
+    
+    <div class="form-group">
+        <input type="text" id="keywordsInput" placeholder="คำหลักที่ลูกค้าพิมพ์ (คั่นด้วยลูกน้ำ) เช่น สวัสดี, หวัดดี">
+    </div>
+    
+    <div class="form-group">
+        <textarea id="responseInput" placeholder="คำตอบของบอท..." style="height:80px"></textarea>
+    </div>
+
+    <label class="checkbox-wrapper">
+        <input type="checkbox" id="addToQuickCheck" onchange="toggleQuickOption()"> 
+        <span><i class="fas fa-plus-square"></i> สร้างปุ่มเมนูลัดด้วย (Quick Menu)</span>
+    </label>
+
+    <div id="quickOptionBox" class="quick-option-box">
+        <div class="form-group">
+            <label style="font-size:0.9rem;">ชื่อบนปุ่ม:</label>
+            <input type="text" id="quickLabelInput" placeholder="เช่น เวลาทำการ">
+        </div>
+        <div class="form-group">
+            <label style="font-size:0.9rem;">ไอคอน:</label>
+            <div class="icon-input-wrapper">
+                <input type="text" id="quickIconInput" placeholder="เช่น far fa-clock" value="fas fa-comment-dots" oninput="updateIconPreview()">
+                <div id="iconPreview" class="icon-preview"><i class="fas fa-comment-dots"></i></div>
+            </div>
+            <div class="suggested-icons" id="suggestedIcons"></div>
+        </div>
+    </div>
+
+    <button class="btn-save" id="saveBtn" onclick="saveResponse()"><i class="fas fa-save"></i> บันทึกข้อมูล</button>
+    <button class="btn-cancel" id="cancelBtn" onclick="cancelEdit()">ยกเลิกการแก้ไข</button>
+
+    <h4 style="margin-top:20px; color:#666;">รายการคำตอบล่าสุด</h4>
+    <table>
+        <thead><tr><th width="30%">คำหลัก</th><th width="50%">คำตอบ</th><th width="20%">จัดการ</th></tr></thead>
+        <tbody id="responseTable"></tbody>
+    </table>
+
+    <h3 class="section-header"><i class="fas fa-th-large"></i> รายการปุ่มเมนูลัด (Quick Menu)</h3>
+    <table>
+        <thead><tr><th width="10%">ไอคอน</th><th width="30%">ชื่อปุ่ม</th><th width="40%">ข้อความที่ส่ง</th><th width="20%">จัดการ</th></tr></thead>
+        <tbody id="quickTable"></tbody>
+    </table>
+
+</div>
+
+<script>
+    const ADMIN_PASS = "1234"; 
+    const LOG_KEY = 'cicc_visit_logs';
+    const QUICK_KEY = 'cicc_quick_btns';
+    const NOTIF_KEY = 'cicc_notification'; // Key สำหรับแจ้งเตือน
+
+    let editIndex = -1;
+    let myChart = null;
+
+    // --- Login ---
+    function checkPassword() {
+        if(document.getElementById('adminPassword').value === ADMIN_PASS) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            loadStats();
+            renderTable();
+            renderQuickTable();
+            renderSuggestedIcons();
+            loadNotification(); // โหลดข้อมูลแจ้งเตือน
+        } else alert("รหัสผิด!");
+    }
+
+    // --- Notification Logic (NEW) ---
+    function loadNotification() {
+        const notifData = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{"active": false, "message": ""}');
+        document.getElementById('notifActive').checked = notifData.active;
+        document.getElementById('notifMessage').value = notifData.message;
+        updateNotifStatusText();
+    }
+
+    function saveNotification() {
+        const isActive = document.getElementById('notifActive').checked;
+        const message = document.getElementById('notifMessage').value.trim();
+        
+        if (isActive && !message) {
+            alert("กรุณากรอกข้อความแจ้งเตือน");
+            return;
+        }
+
+        const data = { active: isActive, message: message };
+        localStorage.setItem(NOTIF_KEY, JSON.stringify(data));
+        alert("บันทึกการแจ้งเตือนเรียบร้อย!");
+        updateNotifStatusText();
+    }
+
+    document.getElementById('notifActive').addEventListener('change', updateNotifStatusText);
+
+    function updateNotifStatusText() {
+        const isActive = document.getElementById('notifActive').checked;
+        const textSpan = document.getElementById('notifStatusText');
+        if(isActive) {
+            textSpan.innerText = "เปิดใช้งาน (แสดงบนหน้าแชท)";
+            textSpan.style.color = "#28a745";
+        } else {
+            textSpan.innerText = "ปิดการใช้งาน";
+            textSpan.style.color = "#666";
+        }
+    }
+
+    // --- Icon Picker Logic ---
+    function updateIconPreview() {
+        const val = document.getElementById('quickIconInput').value;
+        const preview = document.getElementById('iconPreview');
+        preview.innerHTML = val ? `<i class="${val}"></i>` : '';
+    }
+
+    function renderSuggestedIcons() {
+        const commonIcons = [
+            { class: 'far fa-clock', name: 'นาฬิกา' }, { class: 'fas fa-phone-alt', name: 'โทรศัพท์' },
+            { class: 'fas fa-envelope', name: 'อีเมล' }, { class: 'fas fa-map-marker-alt', name: 'แผนที่' },
+            { class: 'fas fa-book-open', name: 'หนังสือ' }, { class: 'fas fa-graduation-cap', name: 'หมวกรับปริญญา' },
+            { class: 'fas fa-user-graduate', name: 'นักศึกษา' }, { class: 'fas fa-bullhorn', name: 'ประกาศ' },
+            { class: 'fas fa-calendar-alt', name: 'ปฏิทิน' }, { class: 'fas fa-star', name: 'ดาว' },
+            { class: 'fas fa-home', name: 'บ้าน' }
+        ];
+        const container = document.getElementById('suggestedIcons');
+        container.innerHTML = ''; 
+        commonIcons.forEach(icon => {
+            const btn = document.createElement('div');
+            btn.className = 'icon-chip';
+            btn.innerHTML = `<i class="${icon.class}"></i>`;
+            btn.onclick = () => { document.getElementById('quickIconInput').value = icon.class; updateIconPreview(); };
+            container.appendChild(btn);
+        });
+    }
+
+    // --- Stats Logic ---
+    function getLogs() { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); }
+    function loadStats() {
+        const logs = getLogs();
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const thisMonthStr = now.toISOString().slice(0, 7);
+        
+        document.getElementById('statToday').innerText = logs.filter(t => t.startsWith(todayStr)).length;
+        document.getElementById('statMonth').innerText = logs.filter(t => t.startsWith(thisMonthStr)).length;
+        document.getElementById('statTotal').innerText = logs.length;
+        updateChart('daily');
+    }
+
+    function updateChart(type) {
+        const logs = getLogs();
+        const now = new Date();
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        let labels = [], dataCounts = [], chartLabel = "";
+        document.getElementById('btnDaily').className = type === 'daily' ? 'active' : '';
+        document.getElementById('btnMonthly').className = type === 'monthly' ? 'active' : '';
+
+        if (type === 'daily') {
+            chartLabel = `สถิติรายวัน (เดือน ${now.getMonth()+1})`;
+            const currentDay = now.getDate();
+            for (let i = 1; i <= currentDay; i++) {
+                labels.push(i);
+                let check = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                dataCounts.push(logs.filter(l => l.startsWith(check)).length);
+            }
+        } else {
+            chartLabel = `สถิติรายเดือน (ปี ${now.getFullYear()})`;
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            for (let i = 0; i <= now.getMonth(); i++) {
+                labels.push(months[i]);
+                let check = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`;
+                dataCounts.push(logs.filter(l => l.startsWith(check)).length);
+            }
+        }
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: 'ผู้เข้าชม', data: dataCounts, borderColor: '#bb0d0d', backgroundColor: 'rgba(187, 13, 13, 0.1)', borderWidth: 2, fill: true, tension: 0.3 }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false }, title: { display: true, text: chartLabel } } }
+        });
+    }
+
+    // --- Response & Quick Menu Logic ---
+    const defaultData = [{ keywords: ["สวัสดี"], response: "สวัสดีครับ" }];
+    const defaultQuick = [{ label: "เวลาทำการ", icon: "far fa-clock", message: "เวลาทำการ" }];
+
+    function loadData() { return JSON.parse(localStorage.getItem('cicc_bot_data') || JSON.stringify(defaultData)); }
+    function loadQuick() { return JSON.parse(localStorage.getItem(QUICK_KEY) || JSON.stringify(defaultQuick)); }
+
+    function toggleQuickOption() {
+        const isChecked = document.getElementById('addToQuickCheck').checked;
+        const box = document.getElementById('quickOptionBox');
+        if (isChecked) {
+            box.classList.add('show');
+            const kw = document.getElementById('keywordsInput').value.split(',')[0].trim();
+            if(kw && !document.getElementById('quickLabelInput').value) document.getElementById('quickLabelInput').value = kw;
+            updateIconPreview();
+        } else box.classList.remove('show');
+    }
+
+    function renderTable() {
+        const data = loadData();
+        const tbody = document.getElementById('responseTable');
+        tbody.innerHTML = '';
+        data.forEach((item, index) => {
+            tbody.innerHTML += `<tr><td>${item.keywords.map(k=>`<span class="keyword-tag">${k}</span>`).join('')}</td><td>${item.response}</td><td class="actions"><button class="btn-edit" onclick="editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
+        });
+    }
+
+    function renderQuickTable() {
+        const data = loadQuick();
+        const tbody = document.getElementById('quickTable');
+        tbody.innerHTML = '';
+        data.forEach((item, index) => {
+            tbody.innerHTML += `<tr><td style="text-align:center; color:var(--primary-color)"><i class="${item.icon}"></i></td><td>${item.label}</td><td>${item.message}</td><td class="actions"><button class="btn-delete" onclick="deleteQuick(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
+        });
+    }
+
+    function saveResponse() {
+        const k = document.getElementById('keywordsInput').value;
+        const r = document.getElementById('responseInput').value;
+        if(!k || !r) return alert("กรุณากรอกคำหลักและคำตอบ");
+        
+        let data = loadData();
+        const keywordsArr = k.split(',').map(s=>s.trim()).filter(x=>x);
+        const obj = { keywords: keywordsArr, response: r };
+        
+        if(editIndex === -1) data.push(obj); else { data[editIndex] = obj; cancelEdit(); }
+        localStorage.setItem('cicc_bot_data', JSON.stringify(data));
+
+        if (document.getElementById('addToQuickCheck').checked) {
+            const qLabel = document.getElementById('quickLabelInput').value;
+            const qIcon = document.getElementById('quickIconInput').value;
+            const qMsg = keywordsArr[0];
+            if (qLabel) {
+                let quickData = loadQuick();
+                quickData.push({ label: qLabel, icon: qIcon, message: qMsg });
+                localStorage.setItem(QUICK_KEY, JSON.stringify(quickData));
+            }
+        }
+        document.getElementById('keywordsInput').value=''; 
+        document.getElementById('responseInput').value='';
+        document.getElementById('addToQuickCheck').checked = false;
+        document.getElementById('quickLabelInput').value='';
+        document.getElementById('quickOptionBox').classList.remove('show');
+        renderTable();
+        renderQuickTable();
+    }
+
+    function deleteItem(i) { if(confirm("ลบคำตอบนี้?")) { let d=loadData(); d.splice(i,1); localStorage.setItem('cicc_bot_data',JSON.stringify(d)); renderTable(); } }
+    function editItem(i) { 
+        let d=loadData(); 
+        document.getElementById('keywordsInput').value=d[i].keywords.join(','); 
+        document.getElementById('responseInput').value=d[i].response;
+        editIndex=i; 
+        document.getElementById('saveBtn').innerHTML='<i class="fas fa-save"></i> อัปเดต'; 
+        document.getElementById('saveBtn').classList.add('editing'); 
+        document.getElementById('cancelBtn').style.display='block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function cancelEdit() {
+        editIndex=-1; 
+        document.getElementById('keywordsInput').value=''; 
+        document.getElementById('responseInput').value='';
+        document.getElementById('saveBtn').innerHTML='<i class="fas fa-save"></i> บันทึกข้อมูล'; 
+        document.getElementById('saveBtn').classList.remove('editing'); 
+        document.getElementById('cancelBtn').style.display='none';
+    }
+    function deleteQuick(i) {
+        if(confirm("ลบปุ่มเมนูลัดนี้?")) {
+            let d = loadQuick();
+            d.splice(i, 1);
+            localStorage.setItem(QUICK_KEY, JSON.stringify(d));
+            renderQuickTable();
+        }
+    }
+</script>
+
+</body>
+</html>
