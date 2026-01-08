@@ -5,79 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CICC Chatbot</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <style>
-        /* --- CSS อยู่ที่นี่เพื่อป้องกันปัญหาภาษาต่างดาว --- */
-        :root {
-            --primary-color: #bb0d0d;
-            --bg-color: #f4f4f9;
-            --chat-bg: #ffffff;
-            --user-msg-bg: #0056b3;
-            --bot-msg-bg: #e9ecef;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Sarabun', sans-serif; }
-        body { background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        /* Notification Bar */
-        .notification-bar {
-            background-color: #ff9800; color: white; padding: 8px 15px; font-size: 0.9rem;
-            display: none; align-items: center; justify-content: space-between;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 20; animation: slideDown 0.3s ease-out;
-        }
-        .notif-content { display: flex; align-items: center; gap: 10px; overflow: hidden; flex: 1; }
-        .notif-content i { flex-shrink: 0; }
-        .marquee-wrapper { overflow: hidden; white-space: nowrap; width: 100%; }
-        .marquee-text { display: inline-block; padding-left: 100%; animation: marquee 15s linear infinite; }
-        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
-        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-        .notif-close { background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.2rem; cursor: pointer; padding: 0 0 0 10px; }
-
-        /* Header */
-        .chatbot-container { width: 100%; height: 100%; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; background: var(--chat-bg); box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .chatbot-header { background: var(--primary-color); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(209, 18, 18, 0.1); z-index: 10; }
-        .header-content { display: flex; align-items: center; gap: 15px; }
-        .logo { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: white; padding: 2px; }
-        .title-group h3 { font-size: 1.2rem; margin-bottom: 2px; }
-        .title-group p { font-size: 0.85rem; opacity: 0.9; }
-        .admin-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 1.2rem; transition: 0.2s; padding: 5px; }
-        .admin-link:hover { color: white; transform: rotate(45deg); }
-
-        /* Chat Area */
-        .chat-area { flex: 1; padding: 20px; padding-bottom: 10px; overflow-y: auto; background: #fff; scroll-behavior: smooth; }
-        .message-group { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start; }
-        .message-group.user { flex-direction: row-reverse; }
-        .avatar { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; overflow: hidden; background-color: #eee; }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar-icon { font-size: 24px; }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 1rem; line-height: 1.5; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-        .bot-message { background-color: var(--bot-msg-bg); color: #333; border-top-left-radius: 4px; }
-        .user-message { background-color: var(--user-msg-bg); color: white; border-top-right-radius: 4px; }
-
-        /* Quick Menu */
-        .quick-menu-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; white-space: nowrap; scrollbar-width: none; }
-        .quick-menu-bar::-webkit-scrollbar { display: none; }
-        .quick-btn { background-color: white; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s ease; display: flex; align-items: center; gap: 6px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .quick-btn:hover { background-color: var(--primary-color); color: white; transform: translateY(-2px); }
-        .quick-btn i { font-size: 1rem; }
-
-        /* TTS Button */
-        .tts-btn { background: transparent; border: 1px solid #ccc; color: #666; margin-top: 8px; padding: 4px 10px; font-size: 0.75rem; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
-        .tts-btn:hover { background: #ddd; color: #333; }
-
-        /* Input Area */
-        .chat-input-area { padding: 10px 15px 15px 15px; background: white; border-top: 1px solid #eee; display: flex; flex-direction: column; }
-        .chat-input-wrapper { display: flex; gap: 10px; align-items: flex-end; background: #f8f9fa; padding: 8px; border-radius: 25px; border: 1px solid #ddd; }
-        textarea { flex: 1; border: none; background: transparent; padding: 10px; font-size: 16px; resize: none; max-height: 120px; outline: none; }
-        #sendBtn { background: var(--primary-color); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; margin-bottom: 2px; }
-        #sendBtn:hover { opacity: 0.9; transform: scale(1.05); }
-        .disclaimer { font-size: 0.75rem; color: #888; text-align: center; margin-top: 8px; }
-    </style>
 </head>
 
 <body>
@@ -125,7 +55,9 @@
         </div>
 
         <div class="chat-input-area">
+            
             <div class="quick-menu-bar" id="quickMenuBar"></div>
+
             <div class="chat-input-wrapper">
                 <textarea id="userInput" placeholder="พิมพ์ข้อความ..." rows="1"></textarea>
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
@@ -137,7 +69,27 @@
 <script>
 let appendMessage, getBotResponse, playFinalVoice;
 let currentAudio = null;
+let thaiVoiceObj = null;
 
+// --- 1. เตรียมโหลดเสียงไทยไว้ก่อน ---
+function initVoices() {
+    const voices = window.speechSynthesis.getVoices();
+    // พยายามหาเสียงที่มีคำว่า TH, Thai หรือ th-TH
+    thaiVoiceObj = voices.find(v => v.lang === 'th-TH' || v.lang.includes('th') || v.name.includes('Thai'));
+    
+    if (thaiVoiceObj) {
+        console.log("เจอเสียงไทยแล้ว:", thaiVoiceObj.name);
+    } else {
+        console.log("ยังไม่เจอเสียงไทย (รอ Browser โหลด...)");
+    }
+}
+
+// รอให้ Browser โหลดเสียงเสร็จ
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = initVoices;
+}
+
+// --- ฟังก์ชันอื่นๆ ---
 function recordVisit() {
     const STORAGE_KEY = 'cicc_visit_logs';
     let logs = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -184,6 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
     recordVisit();
     renderQuickButtons();
     loadNotification();
+    
+    // เรียกโหลดเสียงครั้งแรก
+    initVoices();
 
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
@@ -200,66 +155,121 @@ document.addEventListener('DOMContentLoaded', () => {
         return stored ? JSON.parse(stored) : defaultBotData;
     }
 
+    // --- ระบบเสียง (แก้ไขใหม่) ---
     playFinalVoice = function(text) {
         if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+
         let cleanText = text.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
         if(!cleanText) return;
+
+        // ลองใช้ Google ก่อน
         playGoogleQueue(cleanText);
     }
 
     function playGoogleQueue(text) {
-        const MAX_LEN = 100; let sentences = [];
-        while (text.length > 0) {
-            let chunk = text.substring(0, MAX_LEN);
+        const MAX_LEN = 100; 
+        let sentences = [];
+        let tempText = text;
+        while (tempText.length > 0) {
+            let chunk = tempText.substring(0, MAX_LEN);
             let lastSpace = chunk.lastIndexOf(' ');
-            if (lastSpace > 0 && text.length > MAX_LEN) chunk = chunk.substring(0, lastSpace);
-            sentences.push(chunk); text = text.substring(chunk.length).trim();
+            if (lastSpace > 0 && tempText.length > MAX_LEN) chunk = chunk.substring(0, lastSpace);
+            sentences.push(chunk);
+            tempText = tempText.substring(chunk.length).trim();
         }
+
         let index = 0;
         function playNextChunk() {
             if (index >= sentences.length) return; 
+            
             let chunk = sentences[index];
+            // ใช้ URL client=tw-ob ที่เสถียรกว่า
             let url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=th&client=tw-ob`;
-            let audio = new Audio(url); currentAudio = audio; 
+            
+            let audio = new Audio(url);
+            currentAudio = audio; 
+            
             audio.onended = function() { index++; playNextChunk(); };
-            audio.onerror = function() { playNativeFallback(sentences.slice(index).join(" ")); };
+            
+            // ถ้า Google Error ให้ใช้เสียงในเครื่องทันที
+            audio.onerror = function() { 
+                console.log("Google TTS Error -> Switching to Native");
+                playNativeFallback(text); 
+            };
+            
             let playPromise = audio.play();
-            if (playPromise !== undefined) { playPromise.catch(error => { playNativeFallback(sentences.slice(index).join(" ")); }); }
+            if (playPromise !== undefined) { 
+                playPromise.catch(error => { 
+                    console.log("Audio Play Blocked -> Switching to Native");
+                    playNativeFallback(text); 
+                }); 
+            }
         }
         playNextChunk();
     }
 
+    // --- ฟังก์ชันเสียงในเครื่อง (Native) แบบบังคับภาษาไทย ---
     function playNativeFallback(text) {
         if (!('speechSynthesis' in window)) return;
+
         window.speechSynthesis.cancel();
+
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'th-TH'; utterance.rate = 1.0;
-        let voices = window.speechSynthesis.getVoices();
-        let thaiVoice = voices.find(v => v.lang.includes('th'));
-        if (thaiVoice) utterance.voice = thaiVoice;
+        utterance.lang = 'th-TH'; // บังคับภาษาไทย
+        utterance.rate = 1.0;
+
+        // ถ้ายังไม่มีเสียงไทย ลองค้นหาใหม่อีกรอบ
+        if (!thaiVoiceObj) {
+            const voices = window.speechSynthesis.getVoices();
+            thaiVoiceObj = voices.find(v => v.lang === 'th-TH' || v.lang.includes('th'));
+        }
+
+        // ถ้าเจอเสียงไทย ให้ใช้เสียงนั้น
+        if (thaiVoiceObj) {
+            utterance.voice = thaiVoiceObj;
+        }
+
         window.speechSynthesis.speak(utterance);
     }
 
     appendMessage = function(sender, text) {
         const messageGroup = document.createElement('div');
         messageGroup.classList.add('message-group', sender);
-        const avatarDiv = document.createElement('div'); avatarDiv.classList.add('avatar');
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.classList.add('avatar');
         if (sender === 'user') {
-            const iconSpan = document.createElement('span'); iconSpan.classList.add('avatar-icon'); iconSpan.textContent = '👤'; avatarDiv.appendChild(iconSpan);
+            const iconSpan = document.createElement('span');
+            iconSpan.classList.add('avatar-icon');
+            iconSpan.textContent = '👤'; 
+            avatarDiv.appendChild(iconSpan);
         } else {
-            const img = document.createElement('img'); img.src = 'cicc.png'; img.alt = 'CICC Bot'; avatarDiv.appendChild(img);
+            const img = document.createElement('img');
+            img.src = 'cicc.png';
+            img.alt = 'CICC Bot';
+            avatarDiv.appendChild(img);
         }
-        const messageDiv = document.createElement('div'); messageDiv.classList.add('message', `${sender}-message`);
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+        
         if (sender === 'bot') {
-            const ttsButton = document.createElement('button'); ttsButton.className = 'tts-btn';
+            const ttsButton = document.createElement('button');
+            ttsButton.className = 'tts-btn';
             ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> ฟังเสียง';
-            ttsButton.onclick = function() { playFinalVoice(text); };
+            
+            // แก้ไข: ส่งข้อความล้วนๆ ไม่เอา HTML tag
+            let plainText = text.replace(/<[^>]*>/g, ' ');
+            ttsButton.onclick = function() { playFinalVoice(plainText); };
+            
             messageDiv.appendChild(ttsButton);
         }
-        messageGroup.appendChild(avatarDiv); messageGroup.appendChild(messageDiv);
-        chatArea.appendChild(messageGroup); chatArea.scrollTop = chatArea.scrollHeight;
+        
+        messageGroup.appendChild(avatarDiv);
+        messageGroup.appendChild(messageDiv);
+        chatArea.appendChild(messageGroup);
+        chatArea.scrollTop = chatArea.scrollHeight;
     }
 
     getBotResponse = function(text) {
@@ -282,15 +292,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
-        userInput.value = ""; adjustTextareaHeight(); processUserMessage(text);
+        userInput.value = "";
+        adjustTextareaHeight();
+        processUserMessage(text);
     }
 
     sendBtn.addEventListener("click", sendMessage);
-    userInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+    userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
     function adjustTextareaHeight() {
-        userInput.style.height = "auto"; userInput.style.height = userInput.scrollHeight + "px";
+        userInput.style.height = "auto";
+        userInput.style.height = userInput.scrollHeight + "px";
         if(userInput.value === '') userInput.style.height = 'auto';
     }
+
     userInput.addEventListener("input", adjustTextareaHeight);
 });
 
