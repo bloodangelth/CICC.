@@ -6,6 +6,7 @@
     <title>CICC Admin Panel</title>
     
     <link rel="stylesheet" href="style1.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -67,6 +68,7 @@
         <button class="btn-save" onclick="saveNotification()"><i class="fas fa-save"></i> บันทึกการแจ้งเตือน</button>
     </div>
 
+
     <h3 class="section-header"><i class="fas fa-robot"></i> จัดการคำตอบ & สร้างปุ่มเมนู</h3>
     
     <div class="form-group">
@@ -118,11 +120,12 @@
     const ADMIN_PASS = "1234"; 
     const LOG_KEY = 'cicc_visit_logs';
     const QUICK_KEY = 'cicc_quick_btns';
-    const NOTIF_KEY = 'cicc_notification';
+    const NOTIF_KEY = 'cicc_notification'; // Key สำหรับแจ้งเตือน
 
     let editIndex = -1;
     let myChart = null;
 
+    // --- Login ---
     function checkPassword() {
         if(document.getElementById('adminPassword').value === ADMIN_PASS) {
             document.getElementById('loginOverlay').style.display = 'none';
@@ -131,10 +134,11 @@
             renderTable();
             renderQuickTable();
             renderSuggestedIcons();
-            loadNotification();
+            loadNotification(); // โหลดข้อมูลแจ้งเตือน
         } else alert("รหัสผิด!");
     }
 
+    // --- Notification Logic (NEW) ---
     function loadNotification() {
         const notifData = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{"active": false, "message": ""}');
         document.getElementById('notifActive').checked = notifData.active;
@@ -171,6 +175,7 @@
         }
     }
 
+    // --- Icon Picker Logic ---
     function updateIconPreview() {
         const val = document.getElementById('quickIconInput').value;
         const preview = document.getElementById('iconPreview');
@@ -197,6 +202,7 @@
         });
     }
 
+    // --- Stats Logic ---
     function getLogs() { return JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); }
     function loadStats() {
         const logs = getLogs();
@@ -243,6 +249,7 @@
         });
     }
 
+    // --- Response & Quick Menu Logic ---
     const defaultData = [{ keywords: ["สวัสดี"], response: "สวัสดีครับ" }];
     const defaultQuick = [{ label: "เวลาทำการ", icon: "far fa-clock", message: "เวลาทำการ" }];
 
