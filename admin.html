@@ -229,7 +229,7 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    // กำหนดขนาดสูงสุด (เช่น กว้างไม่เกิน 600px เพื่อประหยัดพื้นที่ Database)
+                    // กำหนดขนาดสูงสุด (ไม่เกิน 600px เพื่อประหยัด Database)
                     const maxWidth = 600;
                     let width = img.width;
                     let height = img.height;
@@ -243,14 +243,14 @@
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // แปลงกลับเป็น Base64 (JPEG quality 0.7)
+                    // แปลงกลับเป็น Base64
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
                     // แทรกโค้ดรูปลงในช่องข้อความ
                     const html = `<br><img src="${dataUrl}" style="width:100%; border-radius:10px; margin-top:5px;"><br>`;
                     insertAtCursor(html);
                     
-                    // คืนค่า input
+                    // คืนค่า input และ placeholder
                     input.value = ''; 
                     document.getElementById('responseInput').setAttribute('placeholder', originalPlaceholder);
                 };
@@ -464,4 +464,5 @@
         } else box.classList.remove('show');
     }
 
-    window.updateIconPreview = functi
+    window.updateIconPreview = function() {
+        const
