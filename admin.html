@@ -208,6 +208,286 @@
     // --- Bot Data Management ---
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
+        // --- แก้ไขจุดที่ 1: แปลง Enter เป็น <br> ---
+        const r = document.getElementById('responseInput').value.replace(/\n/g, "<br>");
+        
+        if(!k || !r) return alert("กรุณากรอกข้อมูลให้ครบ");
+        
+        const keywordsArr = k.split(',').map(s=>s.trim()).filter(x=>x);
+        const obj = { keywords: keywordsArr, response: r };
+        
+        // อัปเดต Array ก่อนส่งขึ้น Firebase
+        let newBotData = [...botData];
+        if(editIndex === -1) newBotData.push(obj);
+        else { newBotData[editIndex] = obj; window.cancelEdit(); }
+        
+        // บันทึกคำตอบ
+        set(ref(db, 'cicc_bot_data'), newBotData);
+
+        // บันทึกปุ่มเมนู (ถ้าติ๊ก)
+        if (document.getElementById('addToQuickCheck').checked) {
+            const qLabel = document.getElementById('quickLabelInput').value;
+            const qIcon = document.getElementById('quickIconInput').value;
+            const qMsg = keywordsArr[0];
+            if (qLabel) {
+                let newQuickData = [...quickData];
+                newQuickData.push({ label: qLabel, icon: qIcon, message: qMsg });
+                set(ref(db, 'cicc_quick_btns'), newQuickData);
+            }
+        }
+        
+        // Reset Inputs
+        document.getElementById('keywordsInput').value=''; 
+        document.getElementById('responseInput').value='';
+        document.getElementById('addToQuickCheck').checked = false;
+        document.getElementById('quickLabelInput').value='';
+        document.getElementById('quickOptionBox').classList.remove('show');
+    }
+
+    window.editItem = function(i) {
+        document.getElementById('keywordsInput').value = botData[i].keywords.join(', ');
+        // --- แก้ไขจุดที่ 2: แปลง <br> กลับเป็น Enter ตอนแก้ไข ---
+        document.getElementById('responseInput').value = botData[i].response.replaceAll("<br>", "\n");
+        
+        editIndex = i;
+        document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> อัปเดต';
+        document.getElementById('saveBtn').classList.add('editing');
+        document.getElementById('cancelBtn').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.deleteItem = function(i) {
+        if(confirm("ลบคำตอบนี้?")) {
+            let newData = [...botData];
+            newData.splice(i, 1);
+            set(ref(db, 'cicc_bot_data'), newData);
+        }
+    }
+
+    window.cancelEdit = function() {
+        editIndex = -1;
+        document.getElementById('keywordsInput').value=''; 
+        document.getElementById('responseInput').value='';
+        document.getElementById('saveBtn').innerHTML='<i class="fas fa-save"></i> บันทึกข้อมูล';
+        document.getElementById('saveBtn').classList.remove('editing');
+        document.getElementById('cancelBtn').style.display='none';
+    }
+
+    window.deleteQuick = function(i) {
+        if(confirm("ลบปุ่มเมนูลัดนี้?")) {
+            let newData = [...quickData];
+            newData.splice(i, 1);
+            set(ref(db, 'cicc_quick_btns'), newData);
+        }
+    }
+
+    // --- Rendering ---
+    function renderTable() {
+        const tbody = document.getElementById('responseTable');
+        tbody.innerHTML = '';
+        botData.forEach((item, index) => {
+            tbody.innerHTML += `<tr><td>${item.keywords.join(', ')}</td><td>${item.response}</td><td class="actions"><button class="btn-edit" onclick="window.editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="window.deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
+        });
+    }
+
+    function renderQuickTable() {
+        const tbody = document.getElementById('quickTable');
+        tbody.innerHTML = '';
+        quickData.forEach((item, index) => {
+            tbody.innerHTML += `<tr><td style="text-align:center; color:var(--primary-color)"><i class="${item.icon}"></i></td><td>${item.label}</td><td>${item.message}</td><td class="actions"><button class="btn-delete" onclick="window.deleteQuick(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
+        });
+    }
+
+    // --- Stats & Chart ---
+    function loadStats() {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const thisMonthStr = now.toISOString().slice(0, 7);
+        
+        document.getElementById('statToday').innerText = logs.filter(t => t.startsWith(todayStr)).length;
+        document.getElementById('statMonth').innerText = logs.filter(t => t.startsWith(thisMonthStr)).length;
+        document.getElementById('statTotal').innerText = logs.length;
+        window.updateChart('daily');
+    }
+
+    window.updateChart = function(type) {
+        const now = new Date();
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        let labels = [], dataCounts = [], chartLabel = "";
+
+        document.getElementById('btnDaily').className = type === 'daily' ? 'active' : '';
+        document.getElementById('btnMonthly').className = type === 'monthly' ? 'active' : '';
+
+        if (type === 'daily') {
+            chartLabel = `สถิติรายวัน (เดือน ${now.getMonth()+1})`;
+            const currentDay = now.getDate();
+            for (let i = 1; i <= currentDay; i++) {
+                labels.push(i);
+                let check = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                dataCounts.push(logs.filter(l => l.startsWith(check)).length);
+            }
+        } else {
+            chartLabel = `สถิติรายเดือน (ปี ${now.getFullYear()})`;
+            const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            for (let i = 0; i <= now.getMonth(); i++) {
+                labels.push(months[i]);
+                let check = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`;
+                dataCounts.push(logs.filter(l => l.startsWith(check)).length);
+            }
+        }
+        if (myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: 'ผู้เข้าชม', data: dataCounts, borderColor: '#bb0d0d', backgroundColor: 'rgba(187, 13, 13, 0.1)', borderWidth: 2, fill: true, tension: 0.3 }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false }, title: { display: true, text: chartLabel } } }
+        });
+    }
+
+    // --- UI Helpers ---
+    window.toggleQuickOption = function() {
+        const isChecked = document.getElementById('addToQuickCheck').checked;
+        const box = document.getElementById('quickOptionBox');
+        if (isChecked) {
+            box.classList.add('show');
+            const kw = document.getElementById('keywordsInput').value.split(',')[0].trim();
+            if(kw && !document.getElementById('quickLabelInput').value) document.getElementById('quickLabelInput').value = kw;
+            window.updateIconPreview();
+        } else box.classList.remove('show');
+    }
+
+    window.updateIconPreview = function() {
+        const val = document.getElementById('quickIconInput').value;
+        document.getElementById('iconPreview').innerHTML = val ? `<i class="${val}"></i>` : '';
+    }
+
+    window.renderSuggestedIcons = function() {
+        const commonIcons = [
+            { class: 'far fa-clock', name: 'นาฬิกา' }, { class: 'fas fa-phone-alt', name: 'โทรศัพท์' },
+            { class: 'fas fa-envelope', name: 'อีเมล' }, { class: 'fas fa-map-marker-alt', name: 'แผนที่' },
+            { class: 'fas fa-book-open', name: 'หนังสือ' }, { class: 'fas fa-graduation-cap', name: 'หมวกรับปริญญา' },
+            { class: 'fas fa-user-graduate', name: 'นักศึกษา' }, { class: 'fas fa-bullhorn', name: 'ประกาศ' },
+            { class: 'fas fa-calendar-alt', name: 'ปฏิทิน' }, { class: 'fas fa-star', name: 'ดาว' },
+            { class: 'fas fa-home', name: 'บ้าน' }
+        ];
+        const container = document.getElementById('suggestedIcons');
+        container.innerHTML = ''; 
+        commonIcons.forEach(icon => {
+            const btn = document.createElement('div');
+            btn.className = 'icon-chip';
+            btn.innerHTML = `<i class="${icon.class}"></i>`;
+            btn.onclick = () => { document.getElementById('quickIconInput').value = icon.class; window.updateIconPreview(); };
+            container.appendChild(btn);
+        });
+    }
+</script>
+
+</body>
+</html>
+    <table>
+        <thead><tr><th width="30%">คำหลัก</th><th width="50%">คำตอบ</th><th width="20%">จัดการ</th></tr></thead>
+        <tbody id="responseTable"></tbody>
+    </table>
+
+    <h3 class="section-header"><i class="fas fa-th-large"></i> รายการปุ่มเมนูลัด (Quick Menu)</h3>
+    <table>
+        <thead><tr><th width="10%">ไอคอน</th><th width="30%">ชื่อปุ่ม</th><th width="40%">ข้อความที่ส่ง</th><th width="20%">จัดการ</th></tr></thead>
+        <tbody id="quickTable"></tbody>
+    </table>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // --- รหัส Firebase ของคุณ ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBs-1OF_k_iUsydZF5DjLFRnv0fcTAJxiE",
+      authDomain: "cicc-91f0b.firebaseapp.com",
+      databaseURL: "https://cicc-91f0b-default-rtdb.firebaseio.com",
+      projectId: "cicc-91f0b",
+      storageBucket: "cicc-91f0b.firebasestorage.app",
+      messagingSenderId: "596317132498",
+      appId: "1:596317132498:web:e5c4bc56a55d26940e7f0b",
+      measurementId: "G-GK5FB9CCRF"
+    };
+
+    // เริ่มต้น Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // ตัวแปร Global สำหรับเก็บข้อมูล
+    let botData = [];
+    let quickData = [];
+    let logs = [];
+    let editIndex = -1;
+    let myChart = null;
+    const ADMIN_PASS = "1234";
+
+    // --- ฟังก์ชันที่ต้องเรียกจาก HTML (ผูกกับ window) ---
+    
+    window.checkPassword = function() {
+        if(document.getElementById('adminPassword').value === ADMIN_PASS) {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            startListening(); // เริ่มดึงข้อมูล
+            renderSuggestedIcons();
+        } else alert("รหัสผิด!");
+    }
+
+    // --- เริ่มดึงข้อมูล Realtime ---
+    function startListening() {
+        // 1. ดึงคำตอบบอท
+        onValue(ref(db, 'cicc_bot_data'), (snapshot) => {
+            botData = snapshot.val() || [];
+            renderTable();
+        });
+
+        // 2. ดึงปุ่มเมนู
+        onValue(ref(db, 'cicc_quick_btns'), (snapshot) => {
+            quickData = snapshot.val() || [];
+            renderQuickTable();
+        });
+
+        // 3. ดึงสถิติ
+        onValue(ref(db, 'cicc_visit_logs'), (snapshot) => {
+            const data = snapshot.val();
+            // แปลง Object เป็น Array
+            logs = data ? Object.values(data) : [];
+            loadStats();
+        });
+
+        // 4. ดึงการแจ้งเตือน
+        onValue(ref(db, 'cicc_notification'), (snapshot) => {
+            const notif = snapshot.val() || {active: false, message: ""};
+            document.getElementById('notifActive').checked = notif.active;
+            document.getElementById('notifMessage').value = notif.message;
+            updateNotifStatusText();
+        });
+    }
+
+    // --- Notification ---
+    window.saveNotification = function() {
+        const isActive = document.getElementById('notifActive').checked;
+        const message = document.getElementById('notifMessage').value.trim();
+        
+        if (isActive && !message) return alert("กรุณากรอกข้อความแจ้งเตือน");
+
+        set(ref(db, 'cicc_notification'), { active: isActive, message: message })
+            .then(() => alert("บันทึกการแจ้งเตือนเรียบร้อย!"));
+    }
+
+    document.getElementById('notifActive').addEventListener('change', updateNotifStatusText);
+    function updateNotifStatusText() {
+        const isActive = document.getElementById('notifActive').checked;
+        const textSpan = document.getElementById('notifStatusText');
+        textSpan.innerText = isActive ? "เปิดใช้งาน (แสดงบนหน้าแชท)" : "ปิดการใช้งาน";
+        textSpan.style.color = isActive ? "#28a745" : "#666";
+    }
+
+    // --- Bot Data Management ---
+    window.saveResponse = function() {
+        const k = document.getElementById('keywordsInput').value;
         const r = document.getElementById('responseInput').value;
         if(!k || !r) return alert("กรุณากรอกข้อมูลให้ครบ");
         
@@ -378,4 +658,5 @@
 </script>
 
 </body>
+
 </html>
