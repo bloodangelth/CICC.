@@ -465,4 +465,24 @@
 
     window.renderSuggestedIcons = function() {
         const commonIcons = [
-            { class: 'far fa-clock', name: 'นาฬิกา' }, { class: 'fas fa-phone-
+            { class: 'far fa-clock', name: 'นาฬิกา' }, { class: 'fas fa-phone-alt', name: 'โทรศัพท์' },
+            { class: 'fas fa-envelope', name: 'อีเมล' }, { class: 'fas fa-map-marker-alt', name: 'แผนที่' },
+            { class: 'fas fa-book-open', name: 'หนังสือ' }, { class: 'fas fa-graduation-cap', name: 'หมวกรับปริญญา' },
+            { class: 'fas fa-user-graduate', name: 'นักศึกษา' }, { class: 'fas fa-bullhorn', name: 'ประกาศ' },
+            { class: 'fas fa-calendar-alt', name: 'ปฏิทิน' }, { class: 'fas fa-star', name: 'ดาว' },
+            { class: 'fas fa-home', name: 'บ้าน' }
+        ];
+        const container = document.getElementById('suggestedIcons');
+        container.innerHTML = ''; 
+        commonIcons.forEach(icon => {
+            const btn = document.createElement('div');
+            btn.className = 'icon-chip';
+            btn.innerHTML = `<i class="${icon.class}"></i>`;
+            btn.onclick = () => { document.getElementById('quickIconInput').value = icon.class; window.updateIconPreview(); };
+            container.appendChild(btn);
+        });
+    }
+</script>
+
+</body>
+</html>
