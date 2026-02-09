@@ -10,13 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* --- ส่วนที่เพิ่มมาใหม่: CSS แต่งปุ่มแทรกรูป/ลิงค์ --- */
+        /* CSS สำหรับแถบเครื่องมือ */
         .editor-toolbar {
             display: flex;
-            gap: 8px;
-            margin-bottom: 0;
-            background: #f1f1f1;
-            padding: 10px;
+            gap: 10px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            padding: 8px;
             border: 1px solid #ddd;
             border-bottom: none;
             border-radius: 8px 8px 0 0;
@@ -25,29 +25,25 @@
         .tool-btn {
             background: #fff;
             border: 1px solid #ccc;
-            padding: 6px 12px;
+            padding: 5px 10px;
             cursor: pointer;
             border-radius: 4px;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: #333;
-            transition: all 0.2s;
+            transition: 0.2s;
             display: flex;
             align-items: center;
             gap: 5px;
         }
         .tool-btn:hover {
-            background: #e9ecef;
-            border-color: #adb5bd;
-            color: #000;
+            background: #e2e6ea;
+            color: var(--primary-color);
         }
-        .tool-btn i { color: #555; }
-        
-        /* ปรับช่องพิมพ์ข้อความให้ติดกับ Toolbar */
+        /* ปรับ textarea ให้เข้ากับ toolbar */
         #responseInput {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
-            margin-top: 0 !important;
-            border-top: 1px solid #eee; /* เส้นแบ่งบางๆ */
+            margin-top: 0;
         }
     </style>
 </head>
@@ -56,7 +52,7 @@
 <div id="loginOverlay">
     <div class="login-box">
         <h3><i class="fas fa-lock"></i> Admin Login</h3>
-        <input type="password" id="adminPassword" placeholder="รหัส:1234" style="width:100%; margin-bottom:10px; padding:10px;" onkeydown="if(event.key==='Enter') window.checkPassword()">
+        <input type="password" id="adminPassword" placeholder="รหัส: 1234" style="width:100%; margin-bottom:10px; padding:10px;" onkeydown="if(event.key==='Enter') window.checkPassword()">
         <button class="btn-save" onclick="window.checkPassword()">เข้าสู่ระบบ</button>
     </div>
 </div>
@@ -117,13 +113,21 @@
     </div>
     
     <div class="form-group">
-        <label>คำตอบของบอท:</label>
         <div class="editor-toolbar">
-            <button class="tool-btn" onclick="window.insertImageTag()"><i class="fas fa-image"></i> แทรกรูป</button>
-            <button class="tool-btn" onclick="window.insertLinkTag()"><i class="fas fa-link"></i> แทรกลิงค์</button>
-            <button class="tool-btn" onclick="window.insertLineBreak()"><i class="fas fa-level-down-alt"></i> เว้นบรรทัด</button>
+            <input type="file" id="imageUploadHidden" accept="image/*" style="display: none;" onchange="window.handleImageUpload(this)">
+            
+            <button class="tool-btn" onclick="document.getElementById('imageUploadHidden').click()">
+                <i class="fas fa-image"></i> เลือกรูปจากอัลบั้ม
+            </button>
+            
+            <button class="tool-btn" onclick="window.insertLinkTag()">
+                <i class="fas fa-link"></i> แทรกลิงค์
+            </button>
+            <button class="tool-btn" onclick="window.insertLineBreak()">
+                <i class="fas fa-level-down-alt"></i> เว้นบรรทัด
+            </button>
         </div>
-        <textarea id="responseInput" placeholder="พิมพ์คำตอบที่นี่..." style="height:120px"></textarea>
+        <textarea id="responseInput" placeholder="คำตอบของบอท..." style="height:120px"></textarea>
     </div>
 
     <label class="checkbox-wrapper">
@@ -179,6 +183,7 @@
       measurementId: "G-GK5FB9CCRF"
     };
 
+    // เริ่มต้น Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
@@ -189,9 +194,8 @@
     let myChart = null;
     const ADMIN_PASS = "1234";
 
-    // --- ฟังก์ชันเสริมสำหรับแทรกโค้ด ---
+    // --- Helper Functions ---
     
-    // ฟังก์ชันแทรกข้อความตรงจุดที่เคอร์เซอร์อยู่
     function insertAtCursor(myValue) {
         const myField = document.getElementById('responseInput');
         if (myField.selectionStart || myField.selectionStart == '0') {
@@ -206,19 +210,59 @@
         myField.focus();
     }
 
-    // ฟังก์ชันปุ่มกดต่างๆ (ต้องประกาศ window. เพื่อให้ HTML เรียกใช้ได้)
-    window.insertImageTag = function() {
-        const url = prompt("กรุณาวางลิงค์รูปภาพ (URL):", "");
-        if (url) {
-            const html = `<br><img src="${url}" style="width:100%; border-radius:10px; margin-top:5px;"><br>`;
-            insertAtCursor(html);
+    // ฟังก์ชันจัดการรูปภาพ (ใหม่)
+    window.handleImageUpload = function(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            // แสดงสถานะว่ากำลังโหลด
+            const originalPlaceholder = document.getElementById('responseInput').getAttribute('placeholder');
+            document.getElementById('responseInput').setAttribute('placeholder', 'กำลังประมวลผลรูปภาพ กรุณารอสักครู่...');
+
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                
+                img.onload = function() {
+                    // สร้าง Canvas เพื่อย่อรูป
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // กำหนดขนาดสูงสุด (เช่น กว้างไม่เกิน 600px เพื่อประหยัดพื้นที่ Database)
+                    const maxWidth = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // แปลงกลับเป็น Base64 (JPEG quality 0.7)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                    // แทรกโค้ดรูปลงในช่องข้อความ
+                    const html = `<br><img src="${dataUrl}" style="width:100%; border-radius:10px; margin-top:5px;"><br>`;
+                    insertAtCursor(html);
+                    
+                    // คืนค่า input
+                    input.value = ''; 
+                    document.getElementById('responseInput').setAttribute('placeholder', originalPlaceholder);
+                };
+            };
+            reader.readAsDataURL(file);
         }
     }
 
     window.insertLinkTag = function() {
-        const url = prompt("กรุณาวางลิงค์เว็บไซต์:", "https://");
+        const url = prompt("กรุณาวาง URL เว็บไซต์:", "https://");
         if (url) {
-            const text = prompt("ข้อความที่จะให้คลิก:", "คลิกที่นี่");
+            const text = prompt("ข้อความที่จะให้กดคลิก:", "คลิกที่นี่");
             const html = ` <a href="${url}" target="_blank" style="color:#007bff; text-decoration:underline;">${text || 'ลิงค์'}</a> `;
             insertAtCursor(html);
         }
@@ -279,7 +323,6 @@
 
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
-        // แปลง Enter เป็น <br> (รักษาฟีเจอร์เดิม)
         const r = document.getElementById('responseInput').value.replace(/\n/g, "<br>");
         
         if(!k || !r) return alert("กรุณากรอกข้อมูลให้ครบ");
@@ -313,7 +356,6 @@
 
     window.editItem = function(i) {
         document.getElementById('keywordsInput').value = botData[i].keywords.join(', ');
-        // แปลง <br> กลับเป็น Enter ตอนแก้ไข
         document.getElementById('responseInput').value = botData[i].response.replaceAll("<br>", "\n");
         
         editIndex = i;
@@ -352,8 +394,7 @@
         const tbody = document.getElementById('responseTable');
         tbody.innerHTML = '';
         botData.forEach((item, index) => {
-            // ตัดคำตอบยาวๆ ให้แสดงสั้นๆ ในตาราง
-            let shortResp = item.response.replace(/<[^>]*>?/gm, ''); 
+            let shortResp = item.response.replace(/<[^>]*>?/gm, '');
             if(shortResp.length > 50) shortResp = shortResp.substring(0, 50) + "...";
             
             tbody.innerHTML += `<tr><td>${item.keywords.join(', ')}</td><td>${shortResp}</td><td class="actions"><button class="btn-edit" onclick="window.editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="window.deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
@@ -423,32 +464,4 @@
         } else box.classList.remove('show');
     }
 
-    window.updateIconPreview = function() {
-        const val = document.getElementById('quickIconInput').value;
-        document.getElementById('iconPreview').innerHTML = val ? `<i class="${val}"></i>` : '';
-    }
-
-    window.renderSuggestedIcons = function() {
-        const commonIcons = [
-            { class: 'far fa-clock', name: 'นาฬิกา' }, { class: 'fas fa-phone-alt', name: 'โทรศัพท์' },
-            { class: 'fas fa-envelope', name: 'อีเมล' }, { class: 'fas fa-map-marker-alt', name: 'แผนที่' },
-            { class: 'fas fa-book-open', name: 'หนังสือ' }, { class: 'fas fa-graduation-cap', name: 'หมวกรับปริญญา' },
-            { class: 'fas fa-user-graduate', name: 'นักศึกษา' }, { class: 'fas fa-bullhorn', name: 'ประกาศ' },
-            { class: 'fas fa-calendar-alt', name: 'ปฏิทิน' }, { class: 'fas fa-star', name: 'ดาว' },
-            { class: 'fas fa-home', name: 'บ้าน' }
-        ];
-        const container = document.getElementById('suggestedIcons');
-        container.innerHTML = ''; 
-        commonIcons.forEach(icon => {
-            const btn = document.createElement('div');
-            btn.className = 'icon-chip';
-            btn.innerHTML = `<i class="${icon.class}"></i>`;
-            btn.onclick = () => { document.getElementById('quickIconInput').value = icon.class; window.updateIconPreview(); };
-            container.appendChild(btn);
-        });
-    }
-</script>
-
-</body>
-</html>
-
+    window.updateIconPreview = functi
