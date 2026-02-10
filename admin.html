@@ -27,7 +27,18 @@
     <div class="stats-grid">
         <div class="stat-card"><h4>วันนี้</h4><div class="number" id="statToday">...</div></div>
         <div class="stat-card"><h4>เดือนนี้</h4><div class="number" id="statMonth">...</div></div>
-        <div class="stat-card"><h4>รวม</h4><div class="number" id="statTotal">...</div></div>
+        <div class="stat-card"><h4>รวมทั้งหมด</h4><div class="number" id="statTotal">...</div></div>
+    </div>
+
+    <div class="chart-section" style="margin-bottom: 20px;">
+        <div class="chart-header">
+            <h4 id="chartTitle" style="margin:0">กราฟผู้เข้าชม</h4>
+            <div class="chart-toggles">
+                <button id="btnWeekly" class="active" onclick="window.updateChart('weekly')">รายสัปดาห์</button>
+                <button id="btnMonthly" onclick="window.updateChart('monthly')">รายเดือน</button>
+            </div>
+        </div>
+        <canvas id="usageChart" height="150"></canvas>
     </div>
 
     <h3 style="color:var(--primary-color); margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">
@@ -36,26 +47,18 @@
     
     <div class="form-group">
         <label>คำหลัก (Keywords):</label>
-        <input type="text" id="keywordsInput" placeholder="เช่น กยศ.สมัครช่วงไหน, สวัสดี (คั่นด้วยลูกน้ำ)">
-        <small style="color:#888; display:block; margin-top:-10px; margin-bottom:15px;">* พิมพ์แค่คำสั้นๆ ระบบจะจับคู่ประโยคยาวๆ ให้เอง</small>
+        <input type="text" id="keywordsInput" placeholder="เช่น กยศ, สมัครเรียน (คั่นด้วยลูกน้ำ)">
+        <small style="color:#888;">* พิมพ์แค่คำสั้นๆ ก็พอ ระบบจะจับคู่ให้อัตโนมัติ</small>
     </div>
     
     <div class="form-group">
         <label>คำตอบ (ใส่รูปภาพได้):</label>
-        
         <div class="editor-container">
             <div class="editor-toolbar">
                 <input type="file" id="imgUpload" hidden accept="image/*" onchange="window.handleImageUpload(this)">
-                
-                <button class="tool-btn" onclick="document.getElementById('imgUpload').click()">
-                    <i class="fas fa-image"></i> เพิ่มรูปภาพ
-                </button>
-                <button class="tool-btn" onclick="document.execCommand('bold')">
-                    <i class="fas fa-bold"></i> ตัวหนา
-                </button>
-                <button class="tool-btn" onclick="document.execCommand('createLink', false, prompt('ใส่ลิ้งก์:', 'http://'))">
-                    <i class="fas fa-link"></i> ลิ้งก์
-                </button>
+                <button class="tool-btn" onclick="document.getElementById('imgUpload').click()"><i class="fas fa-image"></i> เพิ่มรูป</button>
+                <button class="tool-btn" onclick="document.execCommand('bold')"><i class="fas fa-bold"></i> หนา</button>
+                <button class="tool-btn" onclick="document.execCommand('createLink', false, prompt('URL:', 'http://'))"><i class="fas fa-link"></i> ลิ้งก์</button>
             </div>
             <div id="richEditor" contenteditable="true" placeholder="พิมพ์คำตอบที่นี่..."></div>
         </div>
@@ -63,7 +66,7 @@
 
     <label class="checkbox-wrapper" style="display:flex; align-items:center; gap:10px; margin:15px 0; cursor:pointer;">
         <input type="checkbox" id="addToQuickCheck" onchange="window.toggleQuickOption()" style="width:20px; height:20px;"> 
-        <span style="font-weight:bold; color:var(--primary-color);"><i class="fas fa-plus-square"></i> สร้างปุ่มเมนูลัดด้วย (Quick Menu)</span>
+        <span style="font-weight:bold; color:var(--primary-color);"><i class="fas fa-plus-square"></i> สร้างปุ่มเมนูลัด (Quick Menu)</span>
     </label>
 
     <div id="quickOptionBox" class="quick-option-box" style="display:none; background:#fff5f5; padding:15px; border-radius:8px; border:1px dashed var(--primary-color);">
@@ -115,9 +118,10 @@
     let quickData = [];
     let visitLogs = [];
     let editIndex = -1;
+    let myChart = null;
     const ADMIN_PASS = "1234";
 
-    // --- Login ---
+    // Login
     window.checkPassword = function() {
         if(document.getElementById('adminPassword').value === ADMIN_PASS) {
             document.getElementById('loginOverlay').style.display = 'none';
@@ -127,26 +131,19 @@
     }
 
     function startListening() {
-        onValue(ref(db, 'cicc_bot_data'), (snap) => {
-            botData = snap.val() || [];
-            renderTable();
-        });
-        onValue(ref(db, 'cicc_quick_btns'), (snap) => {
-            quickData = snap.val() || [];
-        });
-        onValue(ref(db, 'cicc_visit_logs'), (snap) => {
+        onValue(ref(db, 'cicc_bot_data'), (snap) => { botData = snap.val() || []; renderTable(); });
+        onValue(ref(db, 'cicc_quick_btns'), (snap) => { quickData = snap.val() || []; });
+        onValue(ref(db, 'cicc_visit_logs'), (snap) => { 
             const data = snap.val();
             visitLogs = data ? Object.values(data) : [];
             loadStats();
         });
     }
 
-    // --- Image Upload Logic (โชว์รูปจริง) ---
     window.handleImageUpload = function(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const reader = new FileReader();
-            
             reader.onload = function(e) {
                 const imgTag = `<br><img src="${e.target.result}"><br>`;
                 document.getElementById('richEditor').focus();
@@ -157,19 +154,14 @@
         }
     }
 
-    // --- Save Logic ---
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
         const r = document.getElementById('richEditor').innerHTML;
-        
         if(!k || !r || r === '<br>') return alert("กรอกข้อมูลให้ครบ");
         
         const obj = { keywords: k.split(',').map(s=>s.trim()).filter(x=>x), response: r };
         let newData = [...botData];
-
-        if(editIndex === -1) newData.push(obj);
-        else { newData[editIndex] = obj; window.cancelEdit(); }
-        
+        if(editIndex === -1) newData.push(obj); else { newData[editIndex] = obj; window.cancelEdit(); }
         set(ref(db, 'cicc_bot_data'), newData);
 
         if (document.getElementById('addToQuickCheck').checked) {
@@ -188,9 +180,7 @@
         document.getElementById('keywordsInput').value = botData[i].keywords.join(', ');
         document.getElementById('richEditor').innerHTML = botData[i].response;
         editIndex = i;
-        const btn = document.getElementById('saveBtn');
-        btn.innerHTML = '<i class="fas fa-save"></i> อัปเดต';
-        btn.style.background = '#ff9800';
+        document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> อัปเดต';
         document.getElementById('cancelBtn').style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -205,34 +195,21 @@
 
     window.cancelEdit = function() {
         editIndex = -1;
-        document.getElementById('keywordsInput').value=''; 
-        document.getElementById('richEditor').innerHTML='';
-        document.getElementById('addToQuickCheck').checked = false;
-        document.getElementById('quickOptionBox').style.display = 'none';
-        const btn = document.getElementById('saveBtn');
-        btn.innerHTML = 'บันทึกข้อมูล';
-        btn.style.background = 'var(--primary-color)';
-        document.getElementById('cancelBtn').style.display='none';
+        document.getElementById('keywordsInput').value=''; document.getElementById('richEditor').innerHTML='';
+        document.getElementById('addToQuickCheck').checked = false; document.getElementById('quickOptionBox').style.display = 'none';
+        document.getElementById('saveBtn').innerHTML = 'บันทึกข้อมูล'; document.getElementById('cancelBtn').style.display='none';
     }
 
     function renderTable() {
         const tbody = document.getElementById('responseTable');
         tbody.innerHTML = '';
         botData.forEach((item, i) => {
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = item.response;
-            let previewText = tempDiv.textContent || tempDiv.innerText || "";
-            if(item.response.includes("<img")) previewText = "📷 [มีรูปภาพ] " + previewText;
+            let tempDiv = document.createElement("div"); tempDiv.innerHTML = item.response;
+            let previewText = tempDiv.textContent || "";
+            if(item.response.includes("<img")) previewText = "📷 [รูปภาพ] " + previewText;
             if(previewText.length > 40) previewText = previewText.substring(0,40) + "...";
-
-            tbody.innerHTML += `<tr>
-                <td>${item.keywords.map(k => `<span class="keyword-tag">${k}</span>`).join('')}</td>
-                <td>${previewText}</td>
-                <td class="actions">
-                    <button class="btn-edit" onclick="window.editItem(${i})"><i class="fas fa-edit"></i></button> 
-                    <button class="btn-delete" onclick="window.deleteItem(${i})"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>${item.keywords.map(k=>`<span class="keyword-tag">${k}</span>`).join('')}</td><td>${previewText}</td>
+            <td class="actions"><button class="btn-edit" onclick="window.editItem(${i})">แก้ไข</button> <button class="btn-delete" onclick="window.deleteItem(${i})">ลบ</button></td></tr>`;
         });
     }
 
@@ -243,6 +220,53 @@
         document.getElementById('statToday').innerText = visitLogs.filter(t => t.startsWith(today)).length;
         document.getElementById('statMonth').innerText = visitLogs.filter(t => t.startsWith(month)).length;
         document.getElementById('statTotal').innerText = visitLogs.length;
+        window.updateChart('weekly'); // เริ่มต้นโชว์กราฟรายสัปดาห์
+    }
+
+    // --- กราฟ 2 โหมด (รายสัปดาห์ vs รายเดือน) ---
+    window.updateChart = function(type) {
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        let labels = [], data = [];
+        const now = new Date();
+
+        document.getElementById('btnWeekly').className = type==='weekly'?'active':'';
+        document.getElementById('btnMonthly').className = type==='monthly'?'active':'';
+
+        if(type === 'weekly') {
+            // รายสัปดาห์ (7 วันย้อนหลัง)
+            for(let i=6; i>=0; i--) {
+                let d = new Date(); d.setDate(now.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+                let dayLabel = d.getDate() + '/' + (d.getMonth()+1);
+                labels.push(dayLabel);
+                data.push(visitLogs.filter(l => l.startsWith(dateStr)).length);
+            }
+        } else {
+            // รายเดือน (ม.ค. - ธ.ค.)
+            const mNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            for(let i=0; i<12; i++) {
+                labels.push(mNames[i]);
+                let checkStr = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`;
+                data.push(visitLogs.filter(l => l.startsWith(checkStr)).length);
+            }
+        }
+
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: labels, 
+                datasets: [{ 
+                    label: type==='weekly' ? 'ผู้เข้าชม (7 วันล่าสุด)' : 'ผู้เข้าชม (รายเดือน)', 
+                    data: data, 
+                    borderColor: '#bb0d0d', 
+                    backgroundColor: 'rgba(187, 13, 13, 0.1)', 
+                    fill: true, 
+                    tension: 0.4 
+                }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: {stepSize:1} } } }
+        });
     }
 
     window.toggleQuickOption = function() {
@@ -250,8 +274,7 @@
         if (document.getElementById('addToQuickCheck').checked) {
             box.style.display = 'block';
             const kw = document.getElementById('keywordsInput').value.split(',')[0].trim();
-            if(kw && !document.getElementById('quickLabelInput').value) 
-                document.getElementById('quickLabelInput').value = kw;
+            if(kw) document.getElementById('quickLabelInput').value = kw;
             window.updateIconPreview();
         } else box.style.display = 'none';
     }
