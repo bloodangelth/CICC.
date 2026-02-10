@@ -30,18 +30,18 @@
         <div class="stat-card"><h4>รวม</h4><div class="number" id="statTotal">...</div></div>
     </div>
 
-    <h3 style="color:var(--primary-color); border-bottom:1px solid #eee; padding-bottom:10px; margin-top:30px;">
-        <i class="fas fa-robot"></i> จัดการคำตอบ & สร้างปุ่มเมนู
+    <h3 style="color:var(--primary-color); margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">
+        <i class="fas fa-robot"></i> จัดการคำตอบ
     </h3>
     
     <div class="form-group">
         <label>คำหลัก (Keywords):</label>
         <input type="text" id="keywordsInput" placeholder="เช่น กยศ.สมัครช่วงไหน, สวัสดี (คั่นด้วยลูกน้ำ)">
-        <small style="color:#888; display:block; margin-top:-10px; margin-bottom:10px;">* พิมพ์แค่คำสั้นๆ ก็พอ ระบบจะจับคู่ให้อัตโนมัติ</small>
+        <small style="color:#888; display:block; margin-top:-10px; margin-bottom:15px;">* พิมพ์แค่คำสั้นๆ ระบบจะจับคู่ประโยคยาวๆ ให้เอง</small>
     </div>
     
     <div class="form-group">
-        <label>คำตอบ (ใส่ข้อความ หรือ รูปภาพ):</label>
+        <label>คำตอบ (ใส่รูปภาพได้):</label>
         
         <div class="editor-container">
             <div class="editor-toolbar">
@@ -57,16 +57,16 @@
                     <i class="fas fa-link"></i> ลิ้งก์
                 </button>
             </div>
-            <div id="richEditor" contenteditable="true" placeholder="พิมพ์คำตอบ หรือกดปุ่มเพิ่มรูปภาพ..."></div>
+            <div id="richEditor" contenteditable="true" placeholder="พิมพ์คำตอบที่นี่..."></div>
         </div>
     </div>
 
     <label class="checkbox-wrapper" style="display:flex; align-items:center; gap:10px; margin:15px 0; cursor:pointer;">
-        <input type="checkbox" id="addToQuickCheck" onchange="window.toggleQuickOption()" style="width:auto; margin:0;"> 
-        <span><i class="fas fa-plus-square"></i> สร้างปุ่มเมนูลัดด้วย (Quick Menu)</span>
+        <input type="checkbox" id="addToQuickCheck" onchange="window.toggleQuickOption()" style="width:20px; height:20px;"> 
+        <span style="font-weight:bold; color:var(--primary-color);"><i class="fas fa-plus-square"></i> สร้างปุ่มเมนูลัดด้วย (Quick Menu)</span>
     </label>
 
-    <div id="quickOptionBox" class="quick-option-box" style="display:none;">
+    <div id="quickOptionBox" class="quick-option-box" style="display:none; background:#fff5f5; padding:15px; border-radius:8px; border:1px dashed var(--primary-color);">
         <div class="form-group">
             <label>ชื่อบนปุ่ม:</label>
             <input type="text" id="quickLabelInput" placeholder="เช่น เวลาทำการ">
@@ -74,14 +74,14 @@
         <div class="form-group">
             <label>ไอคอน:</label>
             <input type="text" id="quickIconInput" placeholder="fas fa-star" value="fas fa-star" oninput="window.updateIconPreview()">
-            <div id="iconPreview" class="icon-preview" style="margin-top:5px; font-size:1.5rem; color:var(--primary-color);"><i class="fas fa-star"></i></div>
+            <div id="iconPreview" style="margin-top:5px; font-size:1.5rem; color:var(--primary-color);"><i class="fas fa-star"></i></div>
         </div>
     </div>
 
-    <button class="btn-save" id="saveBtn" style="margin-top:15px;" onclick="window.saveResponse()">บันทึกข้อมูล</button>
+    <button class="btn-save" id="saveBtn" onclick="window.saveResponse()">บันทึกข้อมูล</button>
     <button class="btn-cancel" id="cancelBtn" onclick="window.cancelEdit()">ยกเลิกการแก้ไข</button>
 
-    <h4 style="margin-top:30px; color:#666;">รายการคำตอบล่าสุด</h4>
+    <h4 style="margin-top:40px; color:#666;">รายการคำตอบล่าสุด</h4>
     <div class="table-wrapper">
         <table>
             <thead><tr><th width="30%">คำหลัก</th><th width="50%">คำตอบ</th><th width="20%">จัดการ</th></tr></thead>
@@ -141,7 +141,7 @@
         });
     }
 
-    // --- Image Upload Logic (โชว์รูปจริง ไม่โชว์โค้ด) ---
+    // --- Image Upload Logic (โชว์รูปจริง) ---
     window.handleImageUpload = function(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
@@ -150,18 +150,16 @@
             reader.onload = function(e) {
                 const imgTag = `<br><img src="${e.target.result}"><br>`;
                 document.getElementById('richEditor').focus();
-                // แทรกรูปภาพลงไปในจุดที่เคอร์เซอร์อยู่
                 document.execCommand('insertHTML', false, imgTag);
             };
             reader.readAsDataURL(file);
-            input.value = ''; // Reset
+            input.value = '';
         }
     }
 
     // --- Save Logic ---
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
-        // ดึง HTML จากกล่อง Rich Editor (จะได้รูปภาพและตัวหนาไปด้วย)
         const r = document.getElementById('richEditor').innerHTML;
         
         if(!k || !r || r === '<br>') return alert("กรอกข้อมูลให้ครบ");
@@ -174,7 +172,6 @@
         
         set(ref(db, 'cicc_bot_data'), newData);
 
-        // Quick Menu Logic
         if (document.getElementById('addToQuickCheck').checked) {
             const qLabel = document.getElementById('quickLabelInput').value;
             const qIcon = document.getElementById('quickIconInput').value;
@@ -184,14 +181,12 @@
                 set(ref(db, 'cicc_quick_btns'), newQData);
             }
         }
-        
         window.cancelEdit();
     }
 
     window.editItem = function(i) {
         document.getElementById('keywordsInput').value = botData[i].keywords.join(', ');
-        document.getElementById('richEditor').innerHTML = botData[i].response; // เอาข้อมูลเดิมใส่กลับเข้าไป
-        
+        document.getElementById('richEditor').innerHTML = botData[i].response;
         editIndex = i;
         const btn = document.getElementById('saveBtn');
         btn.innerHTML = '<i class="fas fa-save"></i> อัปเดต';
@@ -214,23 +209,20 @@
         document.getElementById('richEditor').innerHTML='';
         document.getElementById('addToQuickCheck').checked = false;
         document.getElementById('quickOptionBox').style.display = 'none';
-
         const btn = document.getElementById('saveBtn');
         btn.innerHTML = 'บันทึกข้อมูล';
         btn.style.background = 'var(--primary-color)';
         document.getElementById('cancelBtn').style.display='none';
     }
 
-    // --- Table Render ---
     function renderTable() {
         const tbody = document.getElementById('responseTable');
         tbody.innerHTML = '';
         botData.forEach((item, i) => {
-            // แสดงตัวอย่างข้อความ (ถ้ามีรูปให้บอกว่ามีรูป)
             let tempDiv = document.createElement("div");
             tempDiv.innerHTML = item.response;
             let previewText = tempDiv.textContent || tempDiv.innerText || "";
-            if(item.response.includes("<img")) previewText = "📷 [รูปภาพ] " + previewText;
+            if(item.response.includes("<img")) previewText = "📷 [มีรูปภาพ] " + previewText;
             if(previewText.length > 40) previewText = previewText.substring(0,40) + "...";
 
             tbody.innerHTML += `<tr>
@@ -248,7 +240,6 @@
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         const month = now.toISOString().slice(0, 7);
-        
         document.getElementById('statToday').innerText = visitLogs.filter(t => t.startsWith(today)).length;
         document.getElementById('statMonth').innerText = visitLogs.filter(t => t.startsWith(month)).length;
         document.getElementById('statTotal').innerText = visitLogs.length;
