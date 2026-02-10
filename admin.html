@@ -10,21 +10,25 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* CSS สำหรับกล่องพิมพ์แบบใหม่ */
+        .editor-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            overflow: hidden;
+        }
         .editor-toolbar {
             display: flex;
             gap: 10px;
-            margin-bottom: 5px;
             background: #f8f9fa;
             padding: 8px;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #ddd;
             flex-wrap: wrap;
         }
         .tool-btn {
             background: #fff;
             border: 1px solid #ccc;
-            padding: 5px 10px;
+            padding: 6px 12px;
             cursor: pointer;
             border-radius: 4px;
             font-size: 0.9rem;
@@ -38,10 +42,28 @@
             background: #e2e6ea;
             color: var(--primary-color);
         }
-        #responseInput {
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
-            margin-top: 0;
+        /* กล่องพิมพ์ข้อความที่แสดงรูปได้ */
+        #richEditor {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            overflow-y: auto;
+            outline: none;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        #richEditor img {
+            max-width: 80%; /* รูปไม่ใหญ่เกินจอ */
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #richEditor:empty:before {
+            content: attr(placeholder);
+            color: #aaa;
+            display: block; /* For Firefox */
         }
     </style>
 </head>
@@ -87,7 +109,7 @@
         <canvas id="usageChart" height="100"></canvas>
     </div>
 
-    <h3 class="section-header"><i class="fas fa-bullhorn"></i> แถบแจ้งเตือนกิจกรรม (Notification)</h3>
+    <h3 class="section-header"><i class="fas fa-bullhorn"></i> แถบแจ้งเตือนกิจกรรม</h3>
     <div class="notif-box">
         <div class="switch-label">
             <label class="switch">
@@ -106,17 +128,28 @@
     <h3 class="section-header"><i class="fas fa-robot"></i> จัดการคำตอบ & สร้างปุ่มเมนู</h3>
     
     <div class="form-group">
-        <input type="text" id="keywordsInput" placeholder="คำหลักที่ลูกค้าพิมพ์ (คั่นด้วยลูกน้ำ) เช่น สวัสดี, หวัดดี">
+        <label>คำหลัก (Keywords) :</label>
+        <input type="text" id="keywordsInput" placeholder="เช่น กยศ.สมัครช่วงไหน, สวัสดี (คั่นด้วยลูกน้ำ)">
+        <small style="color:#666;">* พิมพ์คำที่ลูกค้ามักจะถาม (ไม่ต้องพิมพ์ประโยคยาวมาก)</small>
     </div>
     
     <div class="form-group">
-        <div class="editor-toolbar">
-            <input type="file" id="imageUploadHidden" accept="image/*" style="display: none;" onchange="window.handleImageUpload(this)">
-            <button class="tool-btn" onclick="document.getElementById('imageUploadHidden').click()"><i class="fas fa-image"></i> เลือกรูปจากอัลบั้ม</button>
-            <button class="tool-btn" onclick="window.insertLinkTag()"><i class="fas fa-link"></i> แทรกลิงค์</button>
-            <button class="tool-btn" onclick="window.insertLineBreak()"><i class="fas fa-level-down-alt"></i> เว้นบรรทัด</button>
+        <label>คำตอบ (ใส่รูปได้):</label>
+        <div class="editor-container">
+            <div class="editor-toolbar">
+                <input type="file" id="imageUploadHidden" accept="image/*" style="display: none;" onchange="window.handleImageUpload(this)">
+                <button class="tool-btn" onclick="document.getElementById('imageUploadHidden').click()">
+                    <i class="fas fa-image"></i> เพิ่มรูปภาพ
+                </button>
+                <button class="tool-btn" onclick="window.insertLinkTag()">
+                    <i class="fas fa-link"></i> แทรกลิงค์
+                </button>
+                <button class="tool-btn" onclick="window.formatText('bold')">
+                    <i class="fas fa-bold"></i> ตัวหนา
+                </button>
+            </div>
+            <div id="richEditor" contenteditable="true" placeholder="พิมพ์คำตอบที่นี่..."></div>
         </div>
-        <textarea id="responseInput" placeholder="คำตอบของบอท..." style="height:120px"></textarea>
     </div>
 
     <label class="checkbox-wrapper">
@@ -181,17 +214,35 @@
     let myChart = null;
     const ADMIN_PASS = "1234";
 
-    // --- Helper Functions ---
-    function insertAtCursor(myValue) {
-        const myField = document.getElementById('responseInput');
-        if (myField.selectionStart || myField.selectionStart == '0') {
-            var startPos = myField.selectionStart;
-            var endPos = myField.selectionEnd;
-            myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length);
+    // --- Helper Functions สำหรับ Rich Editor ---
+    function insertHtmlAtCursor(html) {
+        const editor = document.getElementById('richEditor');
+        editor.focus();
+        
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            let range = sel.getRangeAt(0);
+            range.deleteContents();
+            
+            const el = document.createElement("div");
+            el.innerHTML = html;
+            let frag = document.createDocumentFragment(), node, lastNode;
+            while ( (node = el.firstChild) ) {
+                lastNode = frag.appendChild(node);
+            }
+            range.insertNode(frag);
+            
+            if (lastNode) {
+                range = range.cloneRange();
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
         } else {
-            myField.value += myValue;
+            // ถ้าไม่มี cursor ให้ต่อท้าย
+            editor.innerHTML += html;
         }
-        myField.focus();
     }
 
     // --- Window Functions ---
@@ -232,16 +283,15 @@
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const reader = new FileReader();
-            const originalPlaceholder = document.getElementById('responseInput').getAttribute('placeholder');
-            document.getElementById('responseInput').setAttribute('placeholder', 'กำลังประมวลผลรูปภาพ...');
-
+            
             reader.onload = function(e) {
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = function() {
+                    // ย่อรูปก่อนแสดง
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const maxWidth = 600;
+                    const maxWidth = 500; // ขนาดรูปสูงสุด
                     let width = img.width;
                     let height = img.height;
 
@@ -253,12 +303,12 @@
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    const html = `<br><img src="${dataUrl}" style="width:100%; border-radius:10px; margin-top:5px;"><br>`;
-                    insertAtCursor(html);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // แทรกรูปเข้า Editor
+                    insertHtmlAtCursor(`<br><img src="${dataUrl}"><br>`);
                     
                     input.value = ''; 
-                    document.getElementById('responseInput').setAttribute('placeholder', originalPlaceholder);
                 };
             };
             reader.readAsDataURL(file);
@@ -269,12 +319,14 @@
         const url = prompt("กรุณาวาง URL เว็บไซต์:", "https://");
         if (url) {
             const text = prompt("ข้อความที่จะให้กดคลิก:", "คลิกที่นี่");
-            const html = ` <a href="${url}" target="_blank" style="color:#007bff; text-decoration:underline;">${text || 'ลิงค์'}</a> `;
-            insertAtCursor(html);
+            insertHtmlAtCursor(` <a href="${url}" target="_blank" style="color:#007bff; text-decoration:underline;">${text || 'ลิงค์'}</a> `);
         }
     }
     
-    window.insertLineBreak = function() { insertAtCursor("\n"); }
+    window.formatText = function(command) {
+        document.execCommand(command, false, null);
+        document.getElementById('richEditor').focus();
+    }
 
     window.saveNotification = function() {
         const isActive = document.getElementById('notifActive').checked;
@@ -294,8 +346,9 @@
 
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
-        const r = document.getElementById('responseInput').value.replace(/\n/g, "<br>");
-        if(!k || !r) return alert("กรุณากรอกข้อมูลให้ครบ");
+        const r = document.getElementById('richEditor').innerHTML; // ดึง HTML จาก div
+        
+        if(!k || !r || r === '<br>') return alert("กรุณากรอกข้อมูลให้ครบ");
         
         const keywordsArr = k.split(',').map(s=>s.trim()).filter(x=>x);
         const obj = { keywords: keywordsArr, response: r };
@@ -317,16 +370,14 @@
             }
         }
         
-        document.getElementById('keywordsInput').value=''; 
-        document.getElementById('responseInput').value='';
-        document.getElementById('addToQuickCheck').checked = false;
-        document.getElementById('quickLabelInput').value='';
-        document.getElementById('quickOptionBox').classList.remove('show');
+        window.cancelEdit();
     }
 
     window.editItem = function(i) {
         document.getElementById('keywordsInput').value = botData[i].keywords.join(', ');
-        document.getElementById('responseInput').value = botData[i].response.replaceAll("<br>", "\n");
+        // ใส่ข้อมูลเดิมกลับเข้า div
+        document.getElementById('richEditor').innerHTML = botData[i].response;
+        
         editIndex = i;
         const btn = document.getElementById('saveBtn');
         btn.innerHTML = '<i class="fas fa-save"></i> อัปเดต';
@@ -346,7 +397,12 @@
     window.cancelEdit = function() {
         editIndex = -1;
         document.getElementById('keywordsInput').value=''; 
-        document.getElementById('responseInput').value='';
+        document.getElementById('richEditor').innerHTML=''; // ล้าง editor
+        
+        document.getElementById('addToQuickCheck').checked = false;
+        document.getElementById('quickLabelInput').value='';
+        document.getElementById('quickOptionBox').classList.remove('show');
+
         const btn = document.getElementById('saveBtn');
         btn.innerHTML = '<i class="fas fa-save"></i> บันทึกข้อมูล';
         btn.classList.remove('editing');
@@ -365,9 +421,14 @@
         const tbody = document.getElementById('responseTable');
         tbody.innerHTML = '';
         botData.forEach((item, index) => {
-            let shortResp = item.response.replace(/<[^>]*>?/gm, '');
-            if(shortResp.length > 50) shortResp = shortResp.substring(0, 50) + "...";
-            tbody.innerHTML += `<tr><td>${item.keywords.join(', ')}</td><td>${shortResp}</td><td class="actions"><button class="btn-edit" onclick="window.editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="window.deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
+            // ตัด html tag ออกเพื่อแสดงตัวอย่างในตาราง
+            let div = document.createElement("div");
+            div.innerHTML = item.response;
+            let text = div.textContent || div.innerText || "";
+            if(text.length > 50) text = text.substring(0, 50) + "...";
+            if(item.response.includes("<img")) text += " [มีรูปภาพ]";
+
+            tbody.innerHTML += `<tr><td>${item.keywords.join(', ')}</td><td>${text}</td><td class="actions"><button class="btn-edit" onclick="window.editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="window.deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
         });
     }
 
