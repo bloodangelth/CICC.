@@ -4,197 +4,189 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CICC Chatbot</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-
     <div class="chatbot-container">
         <div id="notificationBar" class="notification-bar">
             <div class="notif-content">
                 <i class="fas fa-bullhorn"></i>
-                <div class="marquee-wrapper">
-                    <span class="marquee-text" id="notifText">ประกาศ...</span>
-                </div>
+                <div class="marquee-wrapper"><span class="marquee-text" id="notifText"></span></div>
             </div>
-            <button class="notif-close" onclick="document.getElementById('notificationBar').style.display='none'">
-                <i class="fas fa-times"></i>
-            </button>
+            <button class="notif-close" onclick="closeNotification()"><i class="fas fa-times"></i></button>
         </div>
 
         <header class="chatbot-header">
             <div class="header-content">
-                <img src="cicc.png" class="logo" alt="Logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'">
-                <div class="title-group">
-                    <h3>CICC Chatbot</h3>
-                    <p>ออนไลน์ • เชื่อมต่อฐานข้อมูล</p>
-                </div>
+                <img src="cicc.png" class="logo" alt="CICC Logo">
+                <div class="title-group"><h3>CICC Chatbot</h3><p>ออนไลน์ • AI Model CICC</p></div>
             </div>
             <a href="admin.html" class="admin-link"><i class="fas fa-cog"></i></a>
         </header>
 
         <div class="chat-area" id="chatArea">
             <div class="message-group bot">
-                <div class="avatar"><img src="cicc.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/4712/4712035.png'"></div>
+                <div class="avatar"><img src="cicc.png" alt="Bot"></div>
                 <div class="message bot-message">
-                    <p>สวัสดีครับ! ผมคือ CICC Chatbot<br>ถามข้อมูลหรือเลือกเมนูด้านล่างได้เลยครับ 👇</p>
+                    <p>สวัสดีครับ! ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ</p>
+                    <p>เลือกหัวข้อด้านล่าง หรือพิมพ์ถามได้เลยครับ 👇</p>
+                    <button class="tts-btn" onclick="speakThai('สวัสดีครับ ผมคือ CICC Chatbot ยินดีให้บริการข้อมูลครับ')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>
                 </div>
             </div>
         </div>
 
         <div class="chat-input-area">
-            <div class="quick-menu-bar" id="quickMenuBar">Loading...</div>
+            <div class="quick-menu-bar" id="quickMenuBar"></div>
             <div class="chat-input-wrapper">
                 <textarea id="userInput" placeholder="พิมพ์ข้อความ..." rows="1"></textarea>
                 <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
             </div>
-            <p class="disclaimer">⚠ AI ตอบคำถามอัตโนมัติ โปรดตรวจสอบข้อมูล</p>
+            <p class="disclaimer">⚠ อาจมีข้อมูลคลาดเคลื่อน</p>
         </div>
     </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBs-1OF_k_iUsydZF5DjLFRnv0fcTAJxiE",
-      authDomain: "cicc-91f0b.firebaseapp.com",
-      databaseURL: "https://cicc-91f0b-default-rtdb.firebaseio.com",
-      projectId: "cicc-91f0b",
-      storageBucket: "cicc-91f0b.firebasestorage.app",
-      messagingSenderId: "596317132498",
-      appId: "1:596317132498:web:e5c4bc56a55d26940e7f0b",
-      measurementId: "G-GK5FB9CCRF"
-    };
+        // --- รหัส Firebase ของคุณ ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBs-1OF_k_iUsydZF5DjLFRnv0fcTAJxiE",
+            authDomain: "cicc-91f0b.firebaseapp.com",
+            databaseURL: "https://cicc-91f0b-default-rtdb.firebaseio.com",
+            projectId: "cicc-91f0b",
+            storageBucket: "cicc-91f0b.firebasestorage.app",
+            messagingSenderId: "596317132498",
+            appId: "1:596317132498:web:e5c4bc56a55d26940e7f0b",
+            measurementId: "G-GK5FB9CCRF"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-    let botData = [];
+        window.botData = [];
+        let voices = [];
 
-    document.addEventListener('DOMContentLoaded', () => {
-        startApp();
-        setupUI();
-    });
-
-    function startApp() {
+        // 1. โหลดข้อมูล
         onValue(ref(db, 'cicc_bot_data'), (snapshot) => {
-            botData = snapshot.val() || [];
-            console.log("Updated Bot Data");
-        });
-
-        onValue(ref(db, 'cicc_quick_btns'), (snapshot) => {
-            const btns = snapshot.val() || [];
-            renderQuickButtons(btns);
+            window.botData = snapshot.val() || [{ keywords: ["สวัสดี"], response: "สวัสดีครับ" }];
         });
 
         onValue(ref(db, 'cicc_notification'), (snapshot) => {
-            const notif = snapshot.val() || {active: false};
+            const notif = snapshot.val();
             const bar = document.getElementById('notificationBar');
-            if(notif.active && notif.message) {
+            if (notif && notif.active && notif.message) {
                 document.getElementById('notifText').textContent = notif.message;
                 bar.style.display = 'flex';
-            } else {
-                bar.style.display = 'none';
+            } else { bar.style.display = 'none'; }
+        });
+
+        onValue(ref(db, 'cicc_quick_btns'), (snapshot) => {
+            const btns = snapshot.val();
+            const bar = document.getElementById('quickMenuBar');
+            bar.innerHTML = '';
+            if (btns) {
+                btns.forEach(btn => {
+                    const button = document.createElement('button');
+                    button.className = 'quick-btn';
+                    button.onclick = () => window.sendQuickMessage(btn.message);
+                    button.innerHTML = `<i class="${btn.icon}"></i> ${btn.label}`;
+                    bar.appendChild(button);
+                });
             }
         });
 
-        push(ref(db, 'cicc_visit_logs'), new Date().toISOString());
-    }
-
-    function renderQuickButtons(buttons) {
-        const bar = document.getElementById('quickMenuBar');
-        bar.innerHTML = '';
-        if(buttons.length === 0) { bar.innerHTML = '<span style="font-size:0.8rem; color:#999; padding:5px;">ไม่มีเมนูลัด</span>'; return; }
-        
-        buttons.forEach(btn => {
-            const b = document.createElement('button');
-            b.className = 'quick-btn';
-            b.onclick = () => processUserMessage(btn.message);
-            b.innerHTML = `<i class="${btn.icon}"></i> ${btn.label}`;
-            bar.appendChild(b);
-        });
-    }
-
-    window.processUserMessage = function(text) {
-        if(!text) return;
-        appendMessage('user', text);
-        
-        setTimeout(() => {
-            const reply = getBotResponse(text);
-            appendMessage('bot', reply);
-        }, 600);
-    }
-
-    function getBotResponse(text) {
-        text = text.toLowerCase().trim();
-        
-        // วนลูปหาคำตอบ (ถ้าข้อความที่พิมพ์มา มี "คีย์เวิร์ด" ผสมอยู่ จะตอบทันที)
-        // เช่น คีย์เวิร์ด="กยศ" พิมพ์มา="สมัคร กยศ. ที่ไหน" -> เจอกยศ -> ตอบ
-        for (let item of botData) {
-            if (item.keywords && Array.isArray(item.keywords)) {
-                for (let k of item.keywords) {
-                    if (text.includes(k.toLowerCase().trim())) return item.response;
-                }
-            }
+        // บันทึกสถิติรายวัน
+        const today = new Date().toISOString().split('T')[0];
+        const visitedKey = 'cicc_visited_' + today;
+        if (!localStorage.getItem(visitedKey)) {
+            push(ref(db, 'cicc_visit_logs'), new Date().toISOString());
+            localStorage.setItem(visitedKey, 'true'); 
         }
-        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองเลือกหัวข้อจากเมนูได้นะครับ";
-    }
 
-    function appendMessage(sender, text) {
+        // --- Logic Chatbot ---
         const chatArea = document.getElementById('chatArea');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message-group ${sender}`;
-        
-        let avatarHTML = sender === 'user' 
-            ? '<div class="avatar">👤</div>' 
-            : '<div class="avatar"><img src="cicc.png" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/4712/4712035.png\'"></div>';
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
 
-        // สำหรับบอท ให้ดึงข้อความล้วน (ไม่เอา HTML tags) ไปอ่านเสียง
-        let ttsBtn = '';
-        if (sender === 'bot') {
-            // ลบ HTML tags ออกจากข้อความเพื่อส่งไปอ่านเสียง
-            let plainText = text.replace(/<[^>]*>/g, ' '); 
-            ttsBtn = `<button class="tts-btn" onclick="playVoice('${plainText.replace(/'/g, "\\'")}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>`;
-        }
+        // ฟังก์ชันช่วยเลื่อนเมนูด้วยเมาส์ (สำหรับ PC)
+        const qBar = document.getElementById('quickMenuBar');
+        qBar.addEventListener('wheel', (evt) => {
+            evt.preventDefault();
+            qBar.scrollLeft += evt.deltaY; // แปลงการหมุนแนวตั้ง เป็นการเลื่อนแนวนอน
+        });
 
-        msgDiv.innerHTML = `
-            ${avatarHTML}
-            <div class="message ${sender}-message">
-                ${text}
-                ${ttsBtn}
-            </div>
-        `;
-        chatArea.appendChild(msgDiv);
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
+        window.sendQuickMessage = (text) => { processUserMessage(text); };
+        window.closeNotification = () => { document.getElementById('notificationBar').style.display = 'none'; }
 
-    function setupUI() {
-        const input = document.getElementById('userInput');
-        const btn = document.getElementById('sendBtn');
-        
-        const send = () => {
-            const txt = input.value.trim();
-            if(txt) { input.value=''; input.style.height='auto'; processUserMessage(txt); }
+        // --- ระบบเสียง Native ---
+        window.speakThai = (text) => {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'th-TH';
+            let thaiVoice = voices.find(v => v.lang === 'th-TH' || v.name.includes('Thai'));
+            if(thaiVoice) utterance.voice = thaiVoice;
+            window.speechSynthesis.speak(utterance);
         };
 
-        btn.onclick = send;
-        input.onkeydown = (e) => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); }};
-        input.oninput = function() { this.style.height='auto'; this.style.height=this.scrollHeight+'px'; };
-    }
+        function loadVoices() { voices = window.speechSynthesis.getVoices(); }
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices();
+        }
 
-    window.playVoice = function(text) {
-        if('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'th-TH';
-            window.speechSynthesis.speak(u);
-        } else { alert("เบราว์เซอร์ไม่รองรับเสียงพูด"); }
-    }
-</script>
+        function appendMessage(sender, text) {
+            const div = document.createElement('div');
+            div.className = `message-group ${sender}`;
+            let html = `
+                <div class="avatar">${sender === 'user' ? '<span class="avatar-icon">👤</span>' : '<img src="cicc.png">'}</div>
+                <div class="message ${sender}-message">${text}`; 
+            
+            if(sender === 'bot') {
+                let plainText = text.replace(/<[^>]*>/g, ' '); 
+                const safeText = plainText.replace(/'/g, "\\'"); 
+                html += `<button class="tts-btn" onclick="speakThai('${safeText}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>`;
+            }
+            html += `</div>`;
+            div.innerHTML = html;
+            chatArea.appendChild(div);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // --- ตรรกะค้นหาคำตอบ (แบบยืดหยุ่น) ---
+        function getBotResponse(text) {
+            const msg = text.toLowerCase().trim();
+            for (let item of window.botData) {
+                if(!item.keywords) continue;
+                for (let kw of item.keywords) {
+                    // ใช้ includes() เพื่อหาว่า "ข้อความที่พิมพ์" มี "คีย์เวิร์ด" ผสมอยู่ไหม
+                    if (msg.includes(kw.toLowerCase().trim())) {
+                        return item.response;
+                    }
+                }
+            }
+            return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองใช้เมนูลัดด้านล่างนะครับ";
+        }
+
+        function processUserMessage(text) {
+            if(!text) return;
+            appendMessage('user', text);
+            setTimeout(() => { appendMessage('bot', getBotResponse(text)); }, 500);
+        }
+
+        sendBtn.addEventListener('click', () => {
+            const text = userInput.value.trim();
+            if(text) { userInput.value = ''; userInput.style.height = 'auto'; processUserMessage(text); }
+        });
+
+        userInput.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
+        });
+        
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px';
+        });
+    </script>
 </body>
 </html>
