@@ -26,7 +26,7 @@ body {
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
-/* --- Main Container --- */
+/* --- Container --- */
 .container {
     max-width: 800px; margin: 0 auto; background: white;
     padding: 20px; border-radius: 12px;
@@ -45,7 +45,7 @@ h2 {
     display: inline-flex; align-items: center; gap: 5px;
 }
 
-/* --- Stats --- */
+/* --- Stats Grid --- */
 .stats-grid {
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 10px; margin-bottom: 20px;
@@ -57,7 +57,36 @@ h2 {
 .stat-card h4 { margin: 0 0 5px; font-size: 0.8rem; color: #666; font-weight: normal; }
 .stat-card .number { font-size: 1.3rem; font-weight: bold; color: var(--primary-color); }
 
-/* --- Editor Box (หัวใจสำคัญ: กล่องพิมพ์รูปภาพ) --- */
+/* --- Chart Section (ส่วนที่เพิ่มมา: แก้กราฟยืด + ปุ่มกด) --- */
+.chart-section {
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    height: 350px; /* ล็อกความสูงกล่องกราฟ */
+    display: flex;
+    flex-direction: column;
+}
+.chart-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; flex-shrink: 0;
+}
+.chart-toggles button {
+    background: #fff; border: 1px solid #ccc;
+    padding: 4px 10px; cursor: pointer; font-size: 0.8rem;
+}
+.chart-toggles button:first-child { border-radius: 4px 0 0 4px; }
+.chart-toggles button:last-child { border-radius: 0 4px 4px 0; }
+.chart-toggles button.active {
+    background: var(--primary-color); color: white; border-color: var(--primary-color);
+}
+/* บังคับ canvas ไม่ให้ล้น */
+.chart-section canvas {
+    max-height: 250px !important;
+}
+
+/* --- Editor Box --- */
 .editor-container {
     border: 1px solid #ddd; border-radius: 8px;
     overflow: hidden; background: #fff; margin-bottom: 15px;
@@ -74,27 +103,43 @@ h2 {
 .tool-btn:active { background: #e2e6ea; transform: translateY(1px); }
 .tool-btn i { color: var(--primary-color); }
 
-/* พื้นที่พิมพ์ (สำคัญมาก) */
 #richEditor {
     width: 100%; min-height: 150px; max-height: 400px;
     padding: 15px; overflow-y: auto; outline: none;
     font-size: 1rem; line-height: 1.6; color: #333;
 }
 #richEditor img {
-    max-width: 50%; /* รูปไม่เต็มจอเกินไป */
-    height: auto; border-radius: 8px; margin: 10px 0;
+    max-width: 50%; height: auto; border-radius: 8px; margin: 10px 0;
     display: block; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #eee;
 }
 #richEditor:empty:before { content: attr(placeholder); color: #aaa; display: block; }
 
-/* --- Table --- */
+/* --- Notification Switch (ส่วนที่เพิ่มมา) --- */
+.notif-box {
+    background: #fff3cd; border: 1px solid #ffeeba;
+    padding: 15px; border-radius: 8px; margin-bottom: 20px;
+}
+.switch-label { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-weight: bold; }
+.switch { position: relative; display: inline-block; width: 40px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 34px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px;
+    left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: #28a745; }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* --- Table & Forms --- */
 .table-wrapper { overflow-x: auto; margin-top: 20px; border: 1px solid #eee; border-radius: 8px; }
 table { width: 100%; border-collapse: collapse; min-width: 600px; }
 th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid #eee; }
 th { background: #f8f9fa; color: #555; font-size: 0.9rem; white-space: nowrap; }
 td { vertical-align: top; font-size: 0.95rem; }
 
-/* --- Forms & Buttons --- */
 input[type="text"], input[type="password"] {
     width: 100%; padding: 12px; border: 1px solid #ddd;
     border-radius: 8px; margin-bottom: 15px; box-sizing: border-box;
@@ -110,9 +155,24 @@ input[type="text"], input[type="password"] {
     margin-top: 10px; display: none;
 }
 
+/* --- Quick Menu & Icons --- */
+.quick-option-box { margin-bottom: 20px; }
+.icon-input-wrapper { display: flex; gap: 10px; align-items: center; }
+.icon-preview {
+    width: 40px; height: 40px; background: white; border: 1px solid #ddd;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; color: var(--primary-color); flex-shrink: 0;
+}
+.suggested-icons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.icon-chip {
+    background: #fff; border: 1px solid #ddd; border-radius: 4px;
+    padding: 5px 10px; cursor: pointer; color: #555; transition: 0.2s;
+}
+.icon-chip:hover { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
 /* --- Mobile Responsive --- */
 @media (max-width: 600px) {
     .container { padding: 15px; width: 100%; border-radius: 0; box-shadow: none; }
     .stats-grid { grid-template-columns: 1fr; }
-    #richEditor img { max-width: 100%; } /* มือถือให้รูปเต็มจอ */
+    #richEditor img { max-width: 100%; }
 }
