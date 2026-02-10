@@ -60,7 +60,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // ตั้งค่าให้ตรงกับ admin.html
     const firebaseConfig = {
       apiKey: "AIzaSyBs-1OF_k_iUsydZF5DjLFRnv0fcTAJxiE",
       authDomain: "cicc-91f0b.firebaseapp.com",
@@ -77,26 +76,22 @@
 
     let botData = [];
 
-    // เริ่มทำงานเมื่อโหลดเสร็จ
     document.addEventListener('DOMContentLoaded', () => {
         startApp();
         setupUI();
     });
 
     function startApp() {
-        // 1. ดึงข้อมูลคำตอบจาก Cloud (แก้ปัญหาข้อมูลไม่เชื่อม)
         onValue(ref(db, 'cicc_bot_data'), (snapshot) => {
             botData = snapshot.val() || [];
-            console.log("Updated Bot Data from Firebase");
+            console.log("Updated Bot Data");
         });
 
-        // 2. ดึงปุ่มเมนู
         onValue(ref(db, 'cicc_quick_btns'), (snapshot) => {
             const btns = snapshot.val() || [];
             renderQuickButtons(btns);
         });
 
-        // 3. ดึงประกาศ
         onValue(ref(db, 'cicc_notification'), (snapshot) => {
             const notif = snapshot.val() || {active: false};
             const bar = document.getElementById('notificationBar');
@@ -108,11 +103,9 @@
             }
         });
 
-        // 4. บันทึกสถิติคนเข้า
         push(ref(db, 'cicc_visit_logs'), new Date().toISOString());
     }
 
-    // --- ส่วนแสดงผล ---
     function renderQuickButtons(buttons) {
         const bar = document.getElementById('quickMenuBar');
         bar.innerHTML = '';
@@ -127,12 +120,10 @@
         });
     }
 
-    // --- ส่วนตอบโต้ ---
-    window.processUserMessage = function(text) { // ทำให้เรียกจากปุ่มได้
+    window.processUserMessage = function(text) {
         if(!text) return;
         appendMessage('user', text);
         
-        // จำลองเวลาคิด
         setTimeout(() => {
             const reply = getBotResponse(text);
             appendMessage('bot', reply);
@@ -141,11 +132,13 @@
 
     function getBotResponse(text) {
         text = text.toLowerCase().trim();
-        // วนลูปหาคำตอบจากข้อมูลที่ดึงมาจาก Firebase
+        
+        // วนลูปหาคำตอบ (ถ้าข้อความที่พิมพ์มา มี "คีย์เวิร์ด" ผสมอยู่ จะตอบทันที)
+        // เช่น คีย์เวิร์ด="กยศ" พิมพ์มา="สมัคร กยศ. ที่ไหน" -> เจอกยศ -> ตอบ
         for (let item of botData) {
             if (item.keywords && Array.isArray(item.keywords)) {
                 for (let k of item.keywords) {
-                    if (text.includes(k.toLowerCase())) return item.response;
+                    if (text.includes(k.toLowerCase().trim())) return item.response;
                 }
             }
         }
@@ -161,9 +154,13 @@
             ? '<div class="avatar">👤</div>' 
             : '<div class="avatar"><img src="cicc.png" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/4712/4712035.png\'"></div>';
 
-        let ttsBtn = sender === 'bot' 
-            ? `<button class="tts-btn" onclick="playVoice(this)"><i class="fas fa-volume-up"></i> ฟังเสียง</button><div style="display:none">${text}</div>` 
-            : '';
+        // สำหรับบอท ให้ดึงข้อความล้วน (ไม่เอา HTML tags) ไปอ่านเสียง
+        let ttsBtn = '';
+        if (sender === 'bot') {
+            // ลบ HTML tags ออกจากข้อความเพื่อส่งไปอ่านเสียง
+            let plainText = text.replace(/<[^>]*>/g, ' '); 
+            ttsBtn = `<button class="tts-btn" onclick="playVoice('${plainText.replace(/'/g, "\\'")}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>`;
+        }
 
         msgDiv.innerHTML = `
             ${avatarHTML}
@@ -176,7 +173,6 @@
         chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    // --- UI Setup ---
     function setupUI() {
         const input = document.getElementById('userInput');
         const btn = document.getElementById('sendBtn');
@@ -191,9 +187,7 @@
         input.oninput = function() { this.style.height='auto'; this.style.height=this.scrollHeight+'px'; };
     }
 
-    // ฟังก์ชันเสียง (Global scope เพื่อให้ HTML เรียกได้)
-    window.playVoice = function(btn) {
-        const text = btn.nextElementSibling.textContent.replace(/<[^>]*>/g, '');
+    window.playVoice = function(text) {
         if('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
