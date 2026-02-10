@@ -18,14 +18,14 @@
 
 body {
     background-color: var(--bg-color);
-    height: 100vh; /* ใช้ 100vh เพื่อความเข้ากันได้ */
-    height: 100dvh; /* ใช้ dvh สำหรับมือถือรุ่นใหม่ */
+    height: 100vh;
+    height: 100dvh; /* เต็มจอในมือถือรุ่นใหม่ */
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* --- Notification --- */
+/* --- Notification Bar --- */
 .notification-bar {
     background-color: #ff9800;
     color: white;
@@ -66,41 +66,58 @@ body {
 
 /* --- Chat Area --- */
 .chat-area {
-    flex: 1; padding: 15px; padding-bottom: 10px; overflow-y: auto;
+    flex: 1; padding: 20px 15px; padding-bottom: 10px; overflow-y: auto;
     background: #fff; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
 }
-.message-group { display: flex; gap: 10px; margin-bottom: 15px; align-items: flex-start; }
+.message-group { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
 .message-group.user { flex-direction: row-reverse; }
+
 .avatar {
-    width: 38px; height: 38px; flex-shrink: 0; display: flex;
+    width: 40px; height: 40px; flex-shrink: 0; display: flex;
     align-items: center; justify-content: center; border-radius: 50%;
     overflow: hidden; background-color: #f0f0f0; border: 1px solid #eee;
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* --- Message Bubbles (ปรับให้อ่านง่าย สบายตา) --- */
 .message {
-    max-width: 85%; padding: 12px 16px; border-radius: 18px;
-    font-size: 0.95rem; line-height: 1.6; word-wrap: break-word;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative;
+    max-width: 85%;
+    padding: 14px 18px;        /* เพิ่มพื้นที่ภายใน */
+    border-radius: 20px;       /* มุมโค้งมนสวยงาม */
+    font-size: 1rem;
+    line-height: 1.6;          /* ระยะห่างบรรทัด อ่านง่าย */
+    word-wrap: break-word;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* เงาบางๆ */
+    position: relative;
 }
-.message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-.bot-message { background-color: #fff; color: #333; border-top-left-radius: 4px; border: 1px solid #f0f0f0; }
-.user-message { background-color: var(--user-msg-bg); color: white; border-top-right-radius: 4px; }
+.message img { max-width: 100%; border-radius: 8px; margin-top: 8px; display: block; }
+
+.bot-message { 
+    background-color: #fff; 
+    color: #333; 
+    border-top-left-radius: 4px; 
+    border: 1px solid #f0f0f0; 
+}
+.user-message { 
+    background-color: var(--user-msg-bg); 
+    color: white; 
+    border-top-right-radius: 4px; 
+}
 
 /* --- TTS Button --- */
 .tts-btn {
     background: #f8f9fa; border: 1px solid #ddd; color: #555;
-    margin-top: 8px; padding: 6px 12px; font-size: 0.8rem;
+    margin-top: 10px; padding: 6px 12px; font-size: 0.8rem;
     border-radius: 15px; cursor: pointer; display: inline-flex;
     align-items: center; gap: 6px; transition: 0.2s;
 }
 .tts-btn:active { background: #e2e6ea; }
 
-/* --- Quick Menu Bar (แก้ใหม่: สวยงาม + เว้นบรรทัดได้) --- */
+/* --- Quick Menu Bar (ปรับให้สวย + เว้นบรรทัด) --- */
 .quick-menu-bar {
-    display: flex; gap: 8px; overflow-x: auto; padding: 12px 15px;
+    display: flex; gap: 10px; overflow-x: auto; padding: 12px 15px;
     background: #ffffff; border-top: 1px solid #f5f5f5;
-    /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
-    scrollbar-width: none; -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 .quick-menu-bar::-webkit-scrollbar { display: none; }
 
@@ -109,7 +126,7 @@ body {
     border: 1px solid var(--primary-color);
     color: var(--primary-color);
     padding: 8px 16px;
-    border-radius: 12px; /* เหลี่ยมมนๆ ทันสมัย */
+    border-radius: 14px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
@@ -117,17 +134,17 @@ body {
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(187, 13, 13, 0.08);
+    box-shadow: 0 3px 6px rgba(187, 13, 13, 0.08);
     transition: transform 0.1s, background 0.2s;
     
-    /* อนุญาตให้เว้นบรรทัดได้ถ้าจำเป็น แต่ไม่ให้สูงเกินไป */
-    max-width: 200px; 
-    line-height: 1.3;
-    white-space: normal; /* ยอมให้ขึ้นบรรทัดใหม่ */
+    /* ส่วนสำคัญ: รองรับข้อความยาว */
+    max-width: 220px; 
+    white-space: normal; /* อนุญาตให้ขึ้นบรรทัดใหม่ */
     text-align: left;
+    line-height: 1.3;
 }
 .quick-btn:active { transform: scale(0.96); background-color: #fff5f5; }
-.quick-btn i { font-size: 1.1rem; }
+.quick-btn i { font-size: 1.2rem; }
 
 /* --- Input Area --- */
 .chat-input-area {
@@ -140,13 +157,14 @@ body {
     background: #f8f9fa; padding: 8px 15px; border-radius: 24px; border: 1px solid #ddd;
 }
 textarea {
-    flex: 1; border: none; background: transparent; padding: 8px 0;
+    flex: 1; border: none; background: transparent; padding: 10px 0;
     font-size: 16px; resize: none; max-height: 100px; outline: none;
 }
 #sendBtn {
     background: var(--primary-color); color: white; border: none;
-    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: 0.2s; flex-shrink: 0; margin-bottom: 2px;
+    box-shadow: 0 2px 5px rgba(187, 13, 13, 0.2);
 }
-.disclaimer { font-size: 0.7rem; color: #aaa; text-align: center; margin-top: 8px; }
+.disclaimer { font-size: 0.75rem; color: #999; text-align: center; margin-top: 8px; }
