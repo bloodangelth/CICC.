@@ -79,7 +79,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         startApp();
         setupUI();
-        setupHorizontalScroll(); // เรียกฟังก์ชันเลื่อนเมนู
+        setupScroll();
     });
 
     function startApp() {
@@ -120,12 +120,12 @@
         });
     }
 
-    // --- ส่วนเลื่อนเมนูด้วยเมาส์ (Mouse Wheel) ---
-    function setupHorizontalScroll() {
-        const container = document.getElementById('quickMenuBar');
-        container.addEventListener('wheel', (evt) => {
+    // --- เพิ่มฟังก์ชันเลื่อนเมนูลัดด้วยเมาส์ (Mouse Wheel) ---
+    function setupScroll() {
+        const slider = document.getElementById('quickMenuBar');
+        slider.addEventListener('wheel', (evt) => {
             evt.preventDefault();
-            container.scrollLeft += evt.deltaY; // แปลงการหมุนเมาส์เป็นแนวนอน
+            slider.scrollLeft += evt.deltaY; // เลื่อนซ้าย-ขวา แทน บน-ล่าง
         });
     }
 
@@ -139,13 +139,13 @@
         }, 600);
     }
 
-    // --- ระบบค้นหาคำตอบ (แก้ให้ยืดหยุ่น) ---
+    // --- ระบบค้นหาคำตอบ (ยืดหยุ่น) ---
     function getBotResponse(text) {
         text = text.toLowerCase().trim();
         for (let item of botData) {
             if (item.keywords && Array.isArray(item.keywords)) {
                 for (let k of item.keywords) {
-                    // ตรวจสอบว่า "ข้อความที่พิมพ์" มี "คีย์เวิร์ด" ผสมอยู่ไหม
+                    // ถ้าข้อความที่พิมพ์มา "มีคำคีย์เวิร์ดผสมอยู่" ก็ให้ตอบเลย
                     if (text.includes(k.toLowerCase().trim())) return item.response;
                 }
             }
@@ -164,8 +164,7 @@
 
         let ttsBtn = '';
         if (sender === 'bot') {
-            // ตัดรูปภาพและ HTML Tags ออกก่อนส่งไปอ่าน
-            let plainText = text.replace(/<[^>]*>/g, ' ');
+            let plainText = text.replace(/<[^>]*>/g, ' '); 
             ttsBtn = `<button class="tts-btn" onclick="playVoice('${plainText.replace(/'/g, "\\'")}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>`;
         }
 
