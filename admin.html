@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <div class="chart-section">
+    <div class="chart-section" style="height: 350px; position: relative;">
         <div class="chart-header">
             <h4 id="chartTitle" style="margin:0">กราฟแสดงผล</h4>
             <div class="chart-toggles">
@@ -48,7 +48,9 @@
                 <button id="btnMonthly" onclick="window.updateChart('monthly')">รายเดือน</button>
             </div>
         </div>
-        <canvas id="usageChart" height="100"></canvas>
+        <div style="height: 250px;">
+            <canvas id="usageChart"></canvas>
+        </div>
     </div>
 
     <h3 class="section-header"><i class="fas fa-bullhorn"></i> แถบแจ้งเตือนกิจกรรม</h3>
@@ -70,10 +72,13 @@
     <h3 class="section-header"><i class="fas fa-robot"></i> จัดการคำตอบ & สร้างปุ่มเมนู</h3>
     
     <div class="form-group">
-        <input type="text" id="keywordsInput" placeholder="คำหลัก (คั่นด้วยลูกน้ำ) เช่น กยศ.สมัครช่วงไหน, สวัสดี">
+        <label>คำหลัก (Keywords):</label>
+        <input type="text" id="keywordsInput" placeholder="คำหลักที่ลูกค้าพิมพ์ (คั่นด้วยลูกน้ำ) เช่น กยศ, สมัครเรียน">
+        <small style="color:#888;">* พิมพ์แค่คำสั้นๆ ก็พอ ระบบจะจับคู่ให้อัตโนมัติ</small>
     </div>
     
     <div class="form-group">
+        <label>คำตอบ (ใส่รูปภาพได้):</label>
         <div class="editor-container" style="border:1px solid #ddd; border-radius:8px; overflow:hidden;">
             <div class="editor-toolbar" style="background:#f8f9fa; padding:8px; border-bottom:1px solid #ddd; display:flex; gap:5px;">
                 <input type="file" id="imageUploadHidden" accept="image/*" style="display: none;" onchange="window.handleImageUpload(this)">
@@ -81,7 +86,7 @@
                 <button class="tool-btn" onclick="document.execCommand('bold')" style="background:white; border:1px solid #ccc; padding:5px 10px; cursor:pointer; border-radius:4px;"><i class="fas fa-bold"></i> ตัวหนา</button>
                 <button class="tool-btn" onclick="window.insertLinkTag()" style="background:white; border:1px solid #ccc; padding:5px 10px; cursor:pointer; border-radius:4px;"><i class="fas fa-link"></i> ลิ้งก์</button>
             </div>
-            <div id="richEditor" contenteditable="true" style="min-height:120px; padding:10px; outline:none;" placeholder="พิมพ์คำตอบที่นี่..."></div>
+            <div id="richEditor" contenteditable="true" style="min-height:150px; max-height:300px; padding:15px; outline:none; overflow-y:auto;" placeholder="พิมพ์คำตอบที่นี่..."></div>
         </div>
     </div>
 
@@ -161,24 +166,24 @@
     }
 
     function startListening() {
-        onValue(ref(db, 'cicc_bot_data'), (snapshot) => { botData = snapshot.val() || []; renderTable(); });
-        onValue(ref(db, 'cicc_quick_btns'), (snapshot) => { quickData = snapshot.val() || []; renderQuickTable(); });
-        onValue(ref(db, 'cicc_visit_logs'), (snapshot) => { logs = snapshot.val() ? Object.values(snapshot.val()) : []; loadStats(); });
-        onValue(ref(db, 'cicc_notification'), (snapshot) => {
-            const notif = snapshot.val() || {active: false, message: ""};
+        onValue(ref(db, 'cicc_bot_data'), (snap) => { botData = snap.val() || []; renderTable(); });
+        onValue(ref(db, 'cicc_quick_btns'), (snap) => { quickData = snap.val() || []; renderQuickTable(); });
+        onValue(ref(db, 'cicc_visit_logs'), (snap) => { logs = snap.val() ? Object.values(snap.val()) : []; loadStats(); });
+        onValue(ref(db, 'cicc_notification'), (snap) => {
+            const notif = snap.val() || {active: false, message: ""};
             document.getElementById('notifActive').checked = notif.active;
             document.getElementById('notifMessage').value = notif.message;
             if(window.updateNotifStatusText) window.updateNotifStatusText();
         });
     }
 
-    // --- Image & Editor Logic ---
+    // --- Image Upload (แสดงรูปใน Editor) ---
     window.handleImageUpload = function(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const reader = new FileReader();
             reader.onload = function(e) {
-                const imgTag = `<br><img src="${e.target.result}" style="max-width:100%; border-radius:8px;"><br>`;
+                const imgTag = `<br><img src="${e.target.result}" style="max-width:100%; border-radius:8px; margin:10px 0;"><br>`;
                 document.getElementById('richEditor').focus();
                 document.execCommand('insertHTML', false, imgTag);
             };
@@ -192,28 +197,29 @@
         if (url) document.execCommand('createLink', false, url);
     }
 
-    // --- Save & Update Logic ---
+    // --- Save Data ---
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
+        // ดึงข้อมูลจาก Rich Editor (innerHTML)
         const r = document.getElementById('richEditor').innerHTML;
         
         if(!k || !r || r === '<br>') return alert("กรอกข้อมูลให้ครบ");
         
         const obj = { keywords: k.split(',').map(s=>s.trim()).filter(x=>x), response: r };
-        let newBotData = [...botData];
+        let newData = [...botData];
 
-        if(editIndex === -1) newBotData.push(obj);
-        else { newBotData[editIndex] = obj; window.cancelEdit(); }
+        if(editIndex === -1) newData.push(obj);
+        else { newData[editIndex] = obj; window.cancelEdit(); }
         
-        set(ref(db, 'cicc_bot_data'), newBotData);
+        set(ref(db, 'cicc_bot_data'), newData);
 
         if (document.getElementById('addToQuickCheck').checked) {
             const qLabel = document.getElementById('quickLabelInput').value;
             const qIcon = document.getElementById('quickIconInput').value;
             if (qLabel) {
-                let newQuickData = [...quickData];
-                newQuickData.push({ label: qLabel, icon: qIcon, message: obj.keywords[0] });
-                set(ref(db, 'cicc_quick_btns'), newQuickData);
+                let newQData = [...quickData];
+                newQData.push({ label: qLabel, icon: qIcon, message: obj.keywords[0] });
+                set(ref(db, 'cicc_quick_btns'), newQData);
             }
         }
         window.cancelEdit();
@@ -251,14 +257,73 @@
         set(ref(db, 'cicc_notification'), {active: active, message: msg}).then(()=>alert('บันทึกแล้ว'));
     }
 
-    // --- Render Tables ---
+    // --- Stats & Graphs (แก้ให้ไม่ยืด) ---
+    function loadStats() {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const monthStr = now.toISOString().slice(0, 7);
+        document.getElementById('statToday').innerText = logs.filter(t => t.startsWith(todayStr)).length;
+        document.getElementById('statMonth').innerText = logs.filter(t => t.startsWith(monthStr)).length;
+        document.getElementById('statTotal').innerText = logs.length;
+        window.updateChart('weekly'); 
+    }
+
+    window.updateChart = function(type) {
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        let labels = [], data = [];
+        const now = new Date();
+
+        document.getElementById('btnWeekly').className = type==='weekly'?'active':'';
+        document.getElementById('btnMonthly').className = type==='monthly'?'active':'';
+
+        if (type === 'weekly') {
+            // รายสัปดาห์ (7 วันล่าสุด)
+            for(let i=6; i>=0; i--) {
+                let d = new Date(); d.setDate(now.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+                labels.push(d.getDate() + '/' + (d.getMonth()+1));
+                data.push(logs.filter(l => l.startsWith(dateStr)).length);
+            }
+        } else {
+            // รายเดือน
+            const mNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+            for(let i=0; i<12; i++) {
+                labels.push(mNames[i]);
+                let checkStr = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`;
+                data.push(logs.filter(l => l.startsWith(checkStr)).length);
+            }
+        }
+
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: labels, 
+                datasets: [{ 
+                    label: type==='weekly' ? 'ผู้เข้าชม (7 วันล่าสุด)' : 'ผู้เข้าชม (รายเดือน)', 
+                    data: data, 
+                    borderColor: '#bb0d0d', 
+                    backgroundColor: 'rgba(187, 13, 13, 0.1)', 
+                    fill: true, 
+                    tension: 0.4 
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, // ป้องกันกราฟยืดสูงเกินไป
+                scales: { y: { beginAtZero: true, ticks: {stepSize:1} } } 
+            }
+        });
+    }
+
+    // --- Helpers ---
     function renderTable() {
         const tbody = document.getElementById('responseTable');
         tbody.innerHTML = '';
         botData.forEach((item, index) => {
             let div = document.createElement("div"); div.innerHTML = item.response;
             let text = div.textContent || div.innerText || "";
-            if(item.response.includes("<img")) text = "🖼️ [รูปภาพ] " + text;
+            if(item.response.includes("<img")) text = "🖼️ [มีรูปภาพ] " + text;
             if(text.length > 40) text = text.substring(0, 40) + "...";
             tbody.innerHTML += `<tr><td>${item.keywords.join(', ')}</td><td>${text}</td><td class="actions"><button class="btn-edit" onclick="window.editItem(${index})"><i class="fas fa-edit"></i></button> <button class="btn-delete" onclick="window.deleteItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`;
         });
@@ -272,52 +337,6 @@
         });
     }
 
-    // --- Stats & Graphs ---
-    function loadStats() {
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const monthStr = now.toISOString().slice(0, 7);
-        document.getElementById('statToday').innerText = logs.filter(t => t.startsWith(todayStr)).length;
-        document.getElementById('statMonth').innerText = logs.filter(t => t.startsWith(monthStr)).length;
-        document.getElementById('statTotal').innerText = logs.length;
-        window.updateChart('weekly'); // เริ่มต้นที่รายสัปดาห์
-    }
-
-    window.updateChart = function(type) {
-        const ctx = document.getElementById('usageChart').getContext('2d');
-        let labels = [], data = [];
-        const now = new Date();
-
-        document.getElementById('btnWeekly').className = type==='weekly'?'active':'';
-        document.getElementById('btnMonthly').className = type==='monthly'?'active':'';
-
-        if (type === 'weekly') {
-            // ย้อนหลัง 7 วัน
-            for(let i=6; i>=0; i--) {
-                let d = new Date(); d.setDate(now.getDate() - i);
-                let dateStr = d.toISOString().split('T')[0];
-                labels.push(d.getDate() + '/' + (d.getMonth()+1));
-                data.push(logs.filter(l => l.startsWith(dateStr)).length);
-            }
-        } else {
-            // รายเดือน (12 เดือน)
-            const mNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-            for(let i=0; i<12; i++) {
-                labels.push(mNames[i]);
-                let checkStr = `${now.getFullYear()}-${String(i+1).padStart(2,'0')}`;
-                data.push(logs.filter(l => l.startsWith(checkStr)).length);
-            }
-        }
-
-        if(myChart) myChart.destroy();
-        myChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels, datasets: [{ label: type==='weekly'?'คนเข้าชม (7 วันล่าสุด)':'คนเข้าชม (รายเดือน)', data, borderColor: '#bb0d0d', backgroundColor: 'rgba(187,13,13,0.1)', fill: true, tension: 0.3 }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: {stepSize:1} } } }
-        });
-    }
-
-    // --- Helpers ---
     window.toggleQuickOption = function() {
         const box = document.getElementById('quickOptionBox');
         if (document.getElementById('addToQuickCheck').checked) {
@@ -336,7 +355,7 @@
     window.updateNotifStatusText = function() {
         const isActive = document.getElementById('notifActive').checked;
         const textSpan = document.getElementById('notifStatusText');
-        textSpan.innerText = isActive ? "เปิดใช้งาน" : "ปิดการใช้งาน";
+        textSpan.innerText = isActive ? "เปิดใช้งาน (แสดงบนหน้าแชท)" : "ปิดการใช้งาน";
         textSpan.style.color = isActive ? "#28a745" : "#666";
     }
     
