@@ -120,12 +120,11 @@
         });
     }
 
-    // --- เพิ่มฟังก์ชันเลื่อนเมนูลัดด้วยเมาส์ (Mouse Wheel) ---
     function setupScroll() {
         const slider = document.getElementById('quickMenuBar');
         slider.addEventListener('wheel', (evt) => {
             evt.preventDefault();
-            slider.scrollLeft += evt.deltaY; // เลื่อนซ้าย-ขวา แทน บน-ล่าง
+            slider.scrollLeft += evt.deltaY;
         });
     }
 
@@ -139,24 +138,46 @@
         }, 600);
     }
 
-    // --- ระบบค้นหาคำตอบ (อัปเกรดความฉลาดขั้นสุด แก้ปัญหาคำคล้ายกัน) ---
+    // --- ระบบค้นหาคำตอบ (อัปเกรด AI ขั้นสุด แก้ปัญหาคำคล้ายกัน 100%) ---
     function getBotResponse(text) {
-        // ลบช่องว่างทิ้งทั้งหมด เผื่อเด็กพิมพ์เว้นวรรคมา
-        const msgClean = text.toLowerCase().replace(/\s+/g, '');
+        const msgClean = text.toLowerCase().replace(/\s+/g, ''); // ลบช่องว่างทิ้ง
         
         let bestMatchResponse = null;
-        let longestMatchLength = 0; // ตัวเก็บสถิติว่าเจอคำหลักที่ยาวกี่ตัวอักษร
+        let highestScore = 0;
+        let bestRatio = 0;
+
+        // ฟังก์ชันสแกนหาคำที่ตรงกันยาวที่สุด
+        function getLCS(s1, s2) {
+            let maxLen = 0;
+            let dp = Array(s1.length + 1).fill(0).map(() => Array(s2.length + 1).fill(0));
+            for (let i = 1; i <= s1.length; i++) {
+                for (let j = 1; j <= s2.length; j++) {
+                    if (s1[i - 1] === s2[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                        if (dp[i][j] > maxLen) maxLen = dp[i][j];
+                    }
+                }
+            }
+            return maxLen;
+        }
 
         for (let item of botData) {
             if (item.keywords && Array.isArray(item.keywords)) {
                 for (let k of item.keywords) {
                     const kwClean = k.toLowerCase().replace(/\s+/g, '');
+                    if (kwClean.length < 2) continue;
+
+                    let matchLength = getLCS(msgClean, kwClean);
+                    // ต้องตรงอย่างน้อย 4 ตัวอักษร หรือเกิน 60% ของคีย์เวิร์ด
+                    let minRequired = Math.min(4, Math.ceil(kwClean.length * 0.6));
                     
-                    // ถ้าข้อความที่เด็กพิมพ์มา มีคำหลักซ่อนอยู่
-                    if (kwClean !== '' && msgClean.includes(kwClean)) {
-                        // เช็คว่าคำหลักนี้ "ยาวและเจาะจงกว่า" คำที่เคยเจอก่อนหน้าไหม
-                        if (kwClean.length > longestMatchLength) {
-                            longestMatchLength = kwClean.length;
+                    if (matchLength >= minRequired) {
+                        let ratio = matchLength / kwClean.length;
+                        
+                        // ถ้าคำไหนยาวกว่า (เจาะจงกว่า) ให้เลือกคำนั้น!
+                        if (matchLength > highestScore || (matchLength === highestScore && ratio > bestRatio)) {
+                            highestScore = matchLength;
+                            bestRatio = ratio;
                             bestMatchResponse = item.response;
                         }
                     }
@@ -164,12 +185,11 @@
             }
         }
 
-        // ถ้าเจอคำตอบที่ดีที่สุด (ตรงและยาวที่สุด) ให้ส่งคำตอบนั้น
         if (bestMatchResponse) {
             return bestMatchResponse;
         }
 
-        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองเลือกหัวข้อจากเมนูได้นะครับ";
+        return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองพิมพ์คำถามใหม่อีกครั้ง หรือเลือกจากเมนูลัดด้านล่างนะครับ";
     }
 
     function appendMessage(sender, text) {
