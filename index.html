@@ -139,17 +139,36 @@
         }, 600);
     }
 
-    // --- ระบบค้นหาคำตอบ (ยืดหยุ่น) ---
+    // --- ระบบค้นหาคำตอบ (อัปเกรดความฉลาดขั้นสุด แก้ปัญหาคำคล้ายกัน) ---
     function getBotResponse(text) {
-        text = text.toLowerCase().trim();
+        // ลบช่องว่างทิ้งทั้งหมด เผื่อเด็กพิมพ์เว้นวรรคมา
+        const msgClean = text.toLowerCase().replace(/\s+/g, '');
+        
+        let bestMatchResponse = null;
+        let longestMatchLength = 0; // ตัวเก็บสถิติว่าเจอคำหลักที่ยาวกี่ตัวอักษร
+
         for (let item of botData) {
             if (item.keywords && Array.isArray(item.keywords)) {
                 for (let k of item.keywords) {
-                    // ถ้าข้อความที่พิมพ์มา "มีคำคีย์เวิร์ดผสมอยู่" ก็ให้ตอบเลย
-                    if (text.includes(k.toLowerCase().trim())) return item.response;
+                    const kwClean = k.toLowerCase().replace(/\s+/g, '');
+                    
+                    // ถ้าข้อความที่เด็กพิมพ์มา มีคำหลักซ่อนอยู่
+                    if (kwClean !== '' && msgClean.includes(kwClean)) {
+                        // เช็คว่าคำหลักนี้ "ยาวและเจาะจงกว่า" คำที่เคยเจอก่อนหน้าไหม
+                        if (kwClean.length > longestMatchLength) {
+                            longestMatchLength = kwClean.length;
+                            bestMatchResponse = item.response;
+                        }
+                    }
                 }
             }
         }
+
+        // ถ้าเจอคำตอบที่ดีที่สุด (ตรงและยาวที่สุด) ให้ส่งคำตอบนั้น
+        if (bestMatchResponse) {
+            return bestMatchResponse;
+        }
+
         return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองเลือกหัวข้อจากเมนูได้นะครับ";
     }
 
