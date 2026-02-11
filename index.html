@@ -138,15 +138,13 @@
         }, 600);
     }
 
-    // --- ระบบค้นหาคำตอบ (อัปเกรด AI ขั้นสุด แก้ปัญหาคำคล้ายกัน 100%) ---
     function getBotResponse(text) {
-        const msgClean = text.toLowerCase().replace(/\s+/g, ''); // ลบช่องว่างทิ้ง
+        const msgClean = text.toLowerCase().replace(/\s+/g, ''); 
         
         let bestMatchResponse = null;
         let highestScore = 0;
         let bestRatio = 0;
 
-        // ฟังก์ชันสแกนหาคำที่ตรงกันยาวที่สุด
         function getLCS(s1, s2) {
             let maxLen = 0;
             let dp = Array(s1.length + 1).fill(0).map(() => Array(s2.length + 1).fill(0));
@@ -168,13 +166,10 @@
                     if (kwClean.length < 2) continue;
 
                     let matchLength = getLCS(msgClean, kwClean);
-                    // ต้องตรงอย่างน้อย 4 ตัวอักษร หรือเกิน 60% ของคีย์เวิร์ด
                     let minRequired = Math.min(4, Math.ceil(kwClean.length * 0.6));
                     
                     if (matchLength >= minRequired) {
                         let ratio = matchLength / kwClean.length;
-                        
-                        // ถ้าคำไหนยาวกว่า (เจาะจงกว่า) ให้เลือกคำนั้น!
                         if (matchLength > highestScore || (matchLength === highestScore && ratio > bestRatio)) {
                             highestScore = matchLength;
                             bestRatio = ratio;
@@ -185,10 +180,7 @@
             }
         }
 
-        if (bestMatchResponse) {
-            return bestMatchResponse;
-        }
-
+        if (bestMatchResponse) return bestMatchResponse;
         return "ขอโทษครับ ผมยังไม่เข้าใจคำถามนี้ ลองพิมพ์คำถามใหม่อีกครั้ง หรือเลือกจากเมนูลัดด้านล่างนะครับ";
     }
 
@@ -201,17 +193,28 @@
             ? '<div class="avatar">👤</div>' 
             : '<div class="avatar"><img src="cicc.png" onerror="this.src=\'https://cdn-icons-png.flaticon.com/512/4712/4712035.png\'"></div>';
 
-        let ttsBtn = '';
+        let ttsBtns = '';
         if (sender === 'bot') {
-            let plainText = text.replace(/<[^>]*>/g, ' '); 
-            ttsBtn = `<button class="tts-btn" onclick="playVoice('${plainText.replace(/'/g, "\\'")}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>`;
+            // คลีนข้อความให้สะอาด ป้องกันโค้ดพังเวลาส่งค่าเข้าฟังก์ชัน playVoice
+            let plainText = text.replace(/<[^>]*>/g, ' ') // เอาแท็ก HTML ออก
+                                .replace(/'/g, "\\'")     // จัดการ single quote
+                                .replace(/"/g, "&quot;")  // จัดการ double quote
+                                .replace(/\n/g, ' ');     // เอาการขึ้นบรรทัดใหม่ออก
+            
+            // เพิ่มปุ่มหยุดเสียงสีแดง
+            ttsBtns = `
+                <div style="margin-top: 10px; display: flex; gap: 5px;">
+                    <button class="tts-btn" onclick="playVoice('${plainText}')"><i class="fas fa-volume-up"></i> ฟังเสียง</button>
+                    <button class="tts-btn" onclick="stopVoice()" style="background: #ff4d4d; color: white;"><i class="fas fa-stop"></i> หยุด</button>
+                </div>
+            `;
         }
 
         msgDiv.innerHTML = `
             ${avatarHTML}
             <div class="message ${sender}-message">
                 ${text}
-                ${ttsBtn}
+                ${ttsBtns}
             </div>
         `;
         chatArea.appendChild(msgDiv);
@@ -232,13 +235,29 @@
         input.oninput = function() { this.style.height='auto'; this.style.height=this.scrollHeight+'px'; };
     }
 
+    // --- อัปเกรดระบบเสียง (แก้บัคเสียงหาย + เพิ่มปุ่มหยุด) ---
+    window.currentUtterance = null; // เก็บตัวแปรไว้ข้างนอก ป้องกันเบราว์เซอร์ลบทิ้ง (Garbage Collection)
+
     window.playVoice = function(text) {
         if('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // หยุดเสียงเก่าก่อนเริ่มใหม่
+            
+            // หน่วงเวลาเล็กน้อยให้ระบบเคลียร์ตัวเอง ป้องกันบัคกดไม่ติด
+            setTimeout(() => {
+                window.currentUtterance = new SpeechSynthesisUtterance(text);
+                window.currentUtterance.lang = 'th-TH';
+                window.speechSynthesis.speak(window.currentUtterance);
+            }, 50);
+        } else { 
+            alert("เบราว์เซอร์ของคุณไม่รองรับระบบเสียงพูดครับ"); 
+        }
+    }
+
+    // ฟังก์ชันสำหรับหยุดเสียง
+    window.stopVoice = function() {
+        if('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'th-TH';
-            window.speechSynthesis.speak(u);
-        } else { alert("เบราว์เซอร์ไม่รองรับเสียงพูด"); }
+        }
     }
 </script>
 </body>
