@@ -199,7 +199,7 @@
         if (url) document.execCommand('createLink', false, url);
     }
 
-    // --- Save Logic ---
+    // --- Save Logic (แก้ไขบัคให้บันทึกปุ่มได้สมบูรณ์) ---
     window.saveResponse = function() {
         const k = document.getElementById('keywordsInput').value;
         const r = document.getElementById('richEditor').innerHTML;
@@ -209,8 +209,12 @@
         const obj = { keywords: k.split(',').map(s=>s.trim()).filter(x=>x), response: r };
         let newData = [...botData];
 
-        if(editIndex === -1) newData.push(obj);
-        else { newData[editIndex] = obj; window.cancelEdit(); }
+        if(editIndex === -1) {
+            newData.push(obj);
+        } else { 
+            newData[editIndex] = obj; 
+            // แก้ไขบัค: ห้ามเรียก cancelEdit() ตรงนี้ เพราะจะลบเครื่องหมายติ๊กถูกเมนูลัด
+        }
         
         set(ref(db, 'cicc_bot_data'), newData);
 
@@ -223,7 +227,10 @@
                 set(ref(db, 'cicc_quick_btns'), newQData);
             }
         }
+        
+        // เคลียร์ฟอร์มหลังจากบันทึกข้อมูลทุกอย่างเสร็จหมดแล้ว
         window.cancelEdit();
+        alert("บันทึกข้อมูลสำเร็จ!"); // เพิ่มแจ้งเตือนให้รู้ว่าบันทึกเรียบร้อย
     }
 
     window.editItem = function(i) {
@@ -255,7 +262,7 @@
     window.saveNotification = function() {
         const active = document.getElementById('notifActive').checked;
         const msg = document.getElementById('notifMessage').value;
-        set(ref(db, 'cicc_notification'), {active: active, message: msg}).then(()=>alert('บันทึกแล้ว'));
+        set(ref(db, 'cicc_notification'), {active: active, message: msg}).then(()=>alert('บันทึกแจ้งเตือนแล้ว!'));
     }
 
     // --- Helper Functions ---
@@ -287,7 +294,7 @@
         document.getElementById('statToday').innerText = visitLogs.filter(t => t.startsWith(today)).length;
         document.getElementById('statMonth').innerText = visitLogs.filter(t => t.startsWith(month)).length;
         document.getElementById('statTotal').innerText = visitLogs.length;
-        window.updateChart('weekly'); // Default เป็นรายสัปดาห์
+        window.updateChart('weekly'); 
     }
 
     // --- กราฟ (แก้ให้ไม่ยืดสูงเกินไป) ---
@@ -300,7 +307,6 @@
         document.getElementById('btnMonthly').className = type==='monthly'?'active':'';
 
         if (type === 'weekly') {
-            // ย้อนหลัง 7 วัน
             for(let i=6; i>=0; i--) {
                 let d = new Date(); d.setDate(now.getDate() - i);
                 let dateStr = d.toISOString().split('T')[0];
@@ -308,7 +314,6 @@
                 data.push(visitLogs.filter(l => l.startsWith(dateStr)).length);
             }
         } else {
-            // รายเดือน
             const mNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
             for(let i=0; i<12; i++) {
                 labels.push(mNames[i]);
@@ -323,7 +328,7 @@
             data: { labels, datasets: [{ label: type==='weekly'?'ผู้เข้าชม (7 วันล่าสุด)':'ผู้เข้าชม (รายเดือน)', data, borderColor: '#bb0d0d', backgroundColor: 'rgba(187, 13, 13, 0.1)', fill: true, tension: 0.3 }] },
             options: { 
                 responsive: true, 
-                maintainAspectRatio: false, // *** สำคัญ: ป้องกันกราฟยืด ***
+                maintainAspectRatio: false, 
                 scales: { y: { beginAtZero: true, ticks: {stepSize:1} } } 
             }
         });
